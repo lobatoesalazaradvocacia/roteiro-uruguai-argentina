@@ -147,8 +147,8 @@
   // ---------- Buscar ----------
   var fonteIndice = $("#indice");
   var BUSCA = fonteIndice ? JSON.parse(fonteIndice.textContent) : null;
-  var ROTULO_K = { parada: "No roteiro", ponto: "Ponto turístico", rest: "Onde comer", cultura: "Cultura", extra: "Extra dos vídeos", compra: "Compras" };
-  var ORDEM_K = { parada: 0, extra: 1, ponto: 2, rest: 3, cultura: 4, compra: 5 };
+  var ROTULO_K = { parada: "No roteiro", reserva: "Reserva", ponto: "Ponto turístico", rest: "Onde comer", cultura: "Cultura", extra: "Extra dos vídeos", compra: "Compras" };
+  var ORDEM_K = { parada: 0, reserva: 1, extra: 2, ponto: 3, rest: 4, cultura: 5, compra: 6 };
   var estado = { q: "", dia: cartaoHoje ? cartaoHoje.id : dias[0].id, diaAuto: true, cidade: "todas", tipo: "tudo" };
   var campo = $("#busca-q"), resultados = $("#resultados"), contBusca = $("#busca-contador"), limpar = $("#busca-limpar");
   var LIMITE = 40, mostrarTodos = false;
@@ -255,6 +255,35 @@
     });
     buscar();
   }
+
+  // ---------- Reservas: prazo de cada uma e filtro por cidade ----------
+  var proximo = null;
+  $$(".prazo[data-limite]").forEach(function (p) {
+    var dias = diasEntre(hoje, p.dataset.limite);
+    var st = $(".prazo-status", p);
+    if (hoje > app.dataset.fim) return;
+    if (dias < 0) { p.classList.add("passou"); st.textContent = "prazo sugerido passou: reservem já"; }
+    else if (dias === 0) { p.classList.add("urgente"); st.textContent = "é hoje!"; }
+    else if (dias <= 14) { p.classList.add("urgente"); st.textContent = "urgente: faltam " + dias + (dias === 1 ? " dia" : " dias"); }
+    else if (dias <= 45) { p.classList.add("em-breve"); st.textContent = "faltam " + dias + " dias"; }
+    else { st.textContent = "faltam " + dias + " dias"; }
+    var card = p.closest(".reserva");
+    if (card && dias >= 0 && (!proximo || p.dataset.limite < proximo.limite)) {
+      proximo = { limite: p.dataset.limite, nome: $("h3", card).textContent, dias: dias };
+    }
+  });
+  var resProx = $("#res-proximo");
+  if (resProx && proximo) {
+    resProx.hidden = false;
+    resProx.textContent = "Próximo prazo: " + proximo.nome + " (" + (proximo.dias === 0 ? "hoje" : "em " + proximo.dias + " dias") + ")";
+  }
+  $$(".chip[data-rfiltro]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var v = b.dataset.valor;
+      $$(".chip[data-rfiltro]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      $$(".reserva").forEach(function (r) { r.hidden = v !== "todas" && r.dataset.cidade !== v; });
+    });
+  });
 
   // ---------- Conversor de moedas ----------
   var brl = $("#conv-brl"), uyu = $("#conv-uyu"), ars = $("#conv-ars");

@@ -37,6 +37,7 @@ O terminal mostra um endereço como `http://192.168.0.10:8000`. Abra esse endere
 | Quero mudar... | Arquivo |
 | --- | --- |
 | Horários, paradas, restaurantes, compras, checklist, cultura | `dados.py` |
+| Reservas (link, contato, antecedência, valor) e verificação do Réveillon | `reservas.py` |
 | Fotos (Wikimedia Commons, licenças livres) | `baixar_fotos.py` → `docs/fotos/` e `creditos_fotos.json` |
 | Sol de Mayo, filete, bandeirinhas, ícones e mapa do Rio da Prata | `cenas.py` |
 | Cores, fontes e layout | `modelo/estilo.css` |

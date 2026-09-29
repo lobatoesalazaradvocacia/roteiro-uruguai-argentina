@@ -69,10 +69,12 @@ DIAS = [
             {"hora": "Depois", "tipo": "doce", "titulo": "Sorvete na Las Delicias",
              "texto": "21 de Setiembre 2729, Pocitos. Se estiver lotada, a La Cigale também tem unidade em Pocitos.",
              "mapas": [("Las Delicias", "Heladería Las Delicias, 21 de Setiembre 2729, Montevideo")]},
-            {"hora": "Jantar", "tipo": "comida", "titulo": "Jantar em Pocitos: La Perdiz", "reserva": True,
-             "texto": "Grelhados; reserva recomendada. Se chegarem tarde e cansados, um chivito (o sanduíche "
-                      "nacional, com bife, presunto, queijo e ovo) na Chivitería Marcos resolve.",
-             "mapas": [("La Perdiz", "La Perdiz restaurante Pocitos Montevideo"),
+            {"hora": "Jantar", "tipo": "comida", "titulo": "Jantar em Punta Carretas: La Perdiz", "reserva": True,
+             "texto": "Grelhados na Guipúzcoa 350, a 10 min de Uber de Pocitos; reserva só por telefone. Se chegarem "
+                      "tarde e cansados, um chivito (o sanduíche nacional, com bife, presunto, queijo e ovo) na "
+                      "Chivitería Marcos, em Pocitos, resolve. Chegando cedo, a noite de hoje é a única em que o Baar "
+                      "Fun Fun (tango ao vivo, com reserva) abre durante a estadia.",
+             "mapas": [("La Perdiz", "La Perdiz Restaurant, Guipúzcoa 350, Montevideo"),
                        ("Chivitería Marcos", "Chivitería Marcos Pocitos Montevideo")]},
         ],
     },
@@ -82,6 +84,9 @@ DIAS = [
         "titulo": "Cordón, 18 de Julio e Ciudad Vieja",
         "lugar": "Feira, avenida e cidade velha",
         "nota": "Único domingo da viagem: dia da Feria de Tristán Narvaja.",
+        "aviso": ("O jantar deste dia precisa ser redefinido",
+                  "A La Pulpería não serve jantar aos domingos (só almoço, 12h–16h) e o Baar Fun Fun fecha aos "
+                  "domingos. Vejam as opções na última parada e na página Reservas."),
         "paradas": [
             {"hora": "9h", "tipo": "feira", "titulo": "Feria de Tristán Narvaja", "foto": "tristan-narvaja",
              "texto": "No Cordón, só aos domingos; chegue cedo. Reserve 1h30 a 2h.",
@@ -105,15 +110,17 @@ DIAS = [
              "texto": "Sábado e domingo às 15h e 16h. Fica a cerca de 15 min a pé do museu.",
              "mapas": [("Teatro Solís", "Teatro Solís, Montevideo")],
              "links": [("Horários do Solís", "https://www.teatrosolis.org.uy/categoria/Horarios-119")]},
-            {"hora": "17h", "tipo": "cafe", "titulo": "Café histórico no Baar Fun Fun",
-             "texto": "Ciudadela 1229, desde 1895, com uvita; reserva no site; horário de domingo n/c. "
-                      "O Café Brasilero fecha aos domingos; o El Facal (18 de Julio esq. Yi) é a alternativa.",
-             "mapas": [("Baar Fun Fun", "Baar Fun Fun, Ciudadela 1229, Montevideo"),
-                       ("El Facal", "El Facal, 18 de Julio y Yi, Montevideo")]},
-            {"hora": "Noite", "tipo": "comida", "extra": ["mov"], "titulo": "Jantar na La Pulpería, em Punta Carretas",
-             "texto": "A Ciudad Vieja esvazia depois das 18h: voltem de Uber. Lagunillas 448; entraña, ojo de bife e "
-                      "provoleta. Não aceita reserva, então cheguem cedo. Fecha só às segundas; horário de domingo a confirmar.",
-             "mapas": [("La Pulpería", "La Pulpería, Lagunillas 448, Montevideo")],
+            {"hora": "17h", "tipo": "cafe", "titulo": "Café histórico no El Facal",
+             "texto": "18 de Julio esq. Yi, a cerca de 15 min a pé do Solís. O Baar Fun Fun e o Café Brasilero fecham "
+                      "aos domingos.",
+             "mapas": [("El Facal", "El Facal, 18 de Julio y Yi, Montevideo")]},
+            {"hora": "Noite", "tipo": "comida", "extra": ["mov"], "titulo": "Jantar em Punta Carretas (a definir)",
+             "texto": "A Ciudad Vieja esvazia depois das 18h: voltem de Uber. A La Pulpería (Lagunillas 448) só serve "
+                      "jantar de terça a sexta; no domingo abre só no almoço, das 12h às 16h, e não aceita reserva. "
+                      "Opções: jantar hoje na García Parrilla (aberta todos os dias) e escolher outra casa para segunda, "
+                      "ou trocar o almoço do Mercado del Puerto por um almoço na La Pulpería.",
+             "mapas": [("La Pulpería", "La Pulpería, Lagunillas 448, Montevideo"),
+                       ("García Parrilla", "Garcia Parrilla, Guipuzcoa 331, Montevideo")],
              "links": [("Site da La Pulpería", "https://lapulperia.com.uy")]},
         ],
     },
@@ -124,12 +131,13 @@ DIAS = [
         "lugar": "Legislativo, museus e Punta Carretas",
         "nota": "Único dia útil pleno em Montevidéu.",
         "paradas": [
-            {"hora": "9h30", "tipo": "cultura", "extra": ["mov"], "titulo": "Palacio Legislativo", "foto": "legislativo",
-             "texto": "Uber de 10 min até a Av. de las Leyes, na Aguada. Visita guiada de 30 a 45 min, em português, "
-                      "só de segunda a sexta; o horário é 10h ou 11h (as fontes divergem). Levem documento.",
+            {"hora": "10h30", "tipo": "cultura", "extra": ["mov"], "titulo": "Palacio Legislativo", "foto": "legislativo",
+             "texto": "Uber de 10 min até a Av. de las Leyes, na Aguada. Visita guiada às 11h (e às 16h), de segunda a "
+                      "sexta, em espanhol, português ou inglês, com 30 a 45 min. Não precisa agendar: paga-se na hora, "
+                      "US$ 3 ou UYU 140, só em dinheiro. Levem documento.",
              "mapas": [("Palacio Legislativo", "Palacio Legislativo, Montevideo")],
              "links": [("Descubrí Montevideo", "https://www.descubrimontevideo.uy/palacio-legislativo")]},
-            {"hora": "11h30", "tipo": "comida", "titulo": "Mercado Agrícola (MAM)",
+            {"hora": "12h", "tipo": "comida", "titulo": "Mercado Agrícola (MAM)",
              "texto": "A cerca de 10 min a pé do Legislativo, para um almoço leve.",
              "mapas": [("MAM", "Mercado Agrícola de Montevideo, José L. Terra 2220")]},
             {"hora": "13h30", "tipo": "cultura", "extra": ["doce"], "titulo": "Ciudad Vieja: escolham três ou quatro",
@@ -140,7 +148,7 @@ DIAS = [
                        ("Museo Andes 1972", "Museo Andes 1972, Rincón 619, Montevideo"),
                        ("Piwo Helados", "Piwo Helados, Sarandí 340, Montevideo")]},
             {"hora": "16h30", "tipo": "cafe", "titulo": "Café histórico na Ciudad Vieja",
-             "texto": "Café Brasilero (Ituzaingó 1447, desde 1877; seg–sex até 19h) ou Baar Fun Fun (Ciudadela 1229).",
+             "texto": "Café Brasilero (Ituzaingó 1447, desde 1877; seg–sex até 19h). O Baar Fun Fun fecha às segundas.",
              "mapas": [("Café Brasilero", "Café Brasilero, Ituzaingó 1447, Montevideo")]},
             {"hora": "17h30", "tipo": "rua", "extra": ["mov"], "titulo": "Faro de Punta Carretas e pôr do sol",
              "texto": "Uber até Punta Carretas para o Faro (horário n/c), a Rambla e o pôr do sol. "
@@ -182,9 +190,9 @@ DIAS = [
                        ("Güerrín", "Pizzería Güerrín, Av. Corrientes 1368, Buenos Aires"),
                        ("Cadore", "Heladería Cadore, Av. Corrientes 1695, Buenos Aires")]},
         ],
-        "aviso": ("Se só houver a saída das 19h30",
+        "aviso": ("Se escolherem a saída das 20h",
                   "A terça ganha um dia inteiro em Montevidéu (Museo Andes 1972, Palacio Taranco, Teatro Solís) e a "
-                  "chegada a Buenos Aires fica para depois das 22h. Nesse caso, o bloco A de Buenos Aires passa para a "
+                  "chegada a Buenos Aires fica para as 22h45. Nesse caso, o bloco A de Buenos Aires passa para a "
                   "tarde de 31/12 e para 01/01, quando a Plaza de Mayo e a Av. de Mayo ainda podem ser vistas por fora."),
     },
     {
@@ -193,6 +201,10 @@ DIAS = [
         "titulo": "Recoleta e Palermo",
         "lugar": "Dia forte de museus",
         "nota": "Único dia de Buenos Aires com museus abertos e sem feriado.",
+        "aviso": ("Jantar de hoje: reservem já",
+                  "Em 29/09, o Don Julio já não tinha jantar para 6 pessoas em 30/12 (havia almoço para 6 e jantar para "
+                  "2 a 4). O Fogón Asado da Uriarte tinha só 2 vagas no jantar; a unidade da Gorriti 3780 tinha 22. "
+                  "Links e contatos na página Reservas."),
         "paradas": [
             {"hora": "9h", "tipo": "cultura", "titulo": "Cementerio de la Recoleta", "foto": "recoleta",
              "texto": "Abre às 9h; estrangeiro paga; visita guiada gratuita em espanhol.",
@@ -272,11 +284,11 @@ DIAS = [
                       "Madero costumam ter oferta. Confirmar em dezembro.",
              "mapas": [("Williamsburg", "Williamsburg burger Palermo Buenos Aires")]},
             {"hora": "14h", "tipo": "rua", "titulo": "Ecoparque", "reserva": True,
-             "texto": "Av. Sarmiento 2601, junto à Plaza Italia (subte D). Entrada gratuita; ter a dom e feriados, 11h–18h "
-                      "(dado de 2025; confirmar para 01/01). Fecha com chuva e limita 2.000 pessoas por dia: reservem o "
-                      "ingresso no site oficial.",
+             "texto": "Av. Sarmiento 2601, junto à Plaza Italia (subte D). Desde junho/2026 estrangeiros pagam ARS 22.650 "
+                      "(≈ R$ 77); ingresso por data no site oficial. Terça a domingo e feriados, 11h–17h30 (abertura em "
+                      "01/01 a confirmar); fecha com chuva.",
              "mapas": [("Ecoparque", "Ecoparque, Av. Sarmiento 2601, Buenos Aires")],
-             "links": [("Ecoparque (turismo BA)", "https://turismo.buenosaires.gob.ar/en/otros-establecimientos/buenos-aires-eco-park")]},
+             "links": [("Ingressos do Ecoparque", "https://ecoparque.buenosaires.gob.ar/ticketera/elegir/ecoparque-entrada-general")]},
             {"hora": "15h30", "tipo": "rua", "titulo": "Bosques de Palermo e Rosedal",
              "texto": "A pé, abertos e grátis, a poucos minutos do Ecoparque.",
              "mapas": [("Rosedal", "Rosedal de Palermo, Buenos Aires")]},
@@ -286,10 +298,10 @@ DIAS = [
              "mapas": [("Rapa Nui", "Rapa Nui, Arenales 2302, Buenos Aires")]},
             {"hora": "19h", "tipo": "festa", "titulo": "Salón 1923, rooftop do Palacio Barolo", "foto": "barolo", "reserva": True,
              "texto": "Av. de Mayo 1370, 16º andar, com vista da cidade ao anoitecer. De sexta a segunda há sessão às 17h "
-                      "(petiscos) e às 19h e 21h (tapeo, que serve de jantar leve). Reserva obrigatória pelo site ou "
-                      "WhatsApp; abertura em 01/01 n/c.",
+                      "(petiscos) e às 19h e 21h (tapeo, que serve de jantar leve). Reserva obrigatória e paga "
+                      "antecipado pelo site; abertura em 01/01 n/c. Fecha às terças.",
              "mapas": [("Palacio Barolo", "Palacio Barolo, Av. de Mayo 1370, Buenos Aires")],
-             "links": [("Salón 1923", "https://salon1923.com/en/")],
+             "links": [("Reservar no Salón 1923", "https://www.reservaonline.support/salon1923/index.html")],
              "whatsapp": ("Salón 1923", "+54 9 11 3779-8847")},
         ],
     },
@@ -348,14 +360,14 @@ CIDADES = {
              "dias": ["d27", "d28"], "pontos": [
                 P("Plaza Independencia, Puerta de la Ciudadela e Mausoléu de Artigas", "", "Praça livre; mausoléu n/c",
                   "Grátis", "Ponto zero da cidade; 30 a 40 min", mapa="Plaza Independencia, Montevideo"),
-                P("Palacio Salvo", "Plaza Independencia 848", "Seg–sex 10h–17h, sáb 10h–14h, dom 12h–16h (n/c)",
-                  "Pago (cerca de US$ 10, n/c)", "Ícone de 1928, com mirante e Museo del Tango; ingressos pela RedTickets",
+                P("Palacio Salvo", "Plaza Independencia 848", "Visitas guiadas em datas mensais, vendidas na RedTickets",
+                  "UYU 600 (≈ R$ 78)", "Ícone de 1928; a visita de 45 min sobe ao terraço do 25º andar e termina no Museo del Tango",
                   link="https://www.descubrimontevideo.uy/palacio-salvo"),
                 P("Peatonal Sarandí", "", "Livre; lojas fecham aos domingos", "Grátis", "Eixo do bloco",
                   mapa="Peatonal Sarandí, Montevideo"),
                 P("Teatro Solís", "Buenos Aires esq. Bartolomé Mitre",
-                  "Visitas: ter–sex 11h, 12h e 16h; sáb–dom 15h e 16h; segunda sem visita",
-                  "UYU 400 para estrangeiros (50% de desconto com o comprovante da taxa turística); quarta grátis",
+                  "Visitas (grade de set/2026): qua–sex 16h; sáb–dom 15h e 16h. Ingresso só na bilheteria, no dia",
+                  "UYU 400 para estrangeiros (50% de desconto com o comprovante digital da Tasa Turística); quarta grátis",
                   "Tour de 50 a 60 min em espanhol, inglês e português; acessibilidade do tour n/c",
                   link="https://www.teatrosolis.org.uy/categoria/Horarios-119", mapa="Teatro Solís, Montevideo"),
                 P("Plaza Matriz e Museo Histórico Cabildo", "Juan Carlos Gómez 1362",
@@ -375,7 +387,7 @@ CIDADES = {
                   "Grátis", "Na Plaza Zabala"),
                 P("MAPI", "25 de Mayo 279", "Seg–sáb 10h30–17h30", "Grátis às segundas; demais dias n/c",
                   "Arte pré-colombiana", mapa="MAPI Museo de Arte Precolombino e Indígena, Montevideo"),
-                P("Museo Andes 1972", "Rincón 619", "Seg–sex 10h–17h, sáb 10h–15h; domingo fechado", "US$ 8",
+                P("Museo Andes 1972", "Rincón 619", "Seg–sex 10h–17h, sáb 10h–15h; domingo fechado; 24 e 31/12 só 10h–13h", "US$ 8",
                   "60 a 90 min", link="https://mandes.uy/en/"),
                 P("Mercado del Puerto", "Pérez Castellano", "Seg–sáb cerca de 9h–17h, dom 10h–17h", "Entrada grátis",
                   "Pico das 12h às 15h; parrillas", mapa="Mercado del Puerto, Montevideo"),
@@ -387,8 +399,8 @@ CIDADES = {
             {"letra": "C", "nome": "Av. 18 de Julio e Cordón", "sub": "Linear e plano", "dias": ["d27"], "pontos": [
                 P("Av. 18 de Julio, Plaza Cagancha e Centro de Fotografía", "18 de Julio 885",
                   "Avenida livre; centro de fotografia n/c", "Grátis", "Da Plaza Independencia à feira, cerca de 1,7 km"),
-                P("Mirador Panorámico", "Soriano 1372, 22º andar", "Seg–sex 10h–18h; sáb, dom e feriados 12h–20h",
-                  "Grátis, com agendamento online", "Fecha com alerta laranja ou vermelho de tempo",
+                P("Mirador Panorámico", "Soriano 1372, 22º andar", "Todos os dias 11h–19h (2026)",
+                  "Grátis, com ingresso QR online", "Fecha com alerta laranja ou vermelho de tempo",
                   link="https://montevideo.gub.uy/noticias/nuevo-horario-del-mirador-panoramico",
                   mapa="Mirador Panorámico Intendencia de Montevideo"),
                 P("Feria de Tristán Narvaja", "Cordón", "Só aos domingos, das 9h até cerca das 14h–16h", "Grátis",
@@ -397,8 +409,8 @@ CIDADES = {
             ]},
             {"letra": "D", "nome": "Aguada", "sub": "Uber de 10 min, 2,5 a 3 km do centro", "dias": ["d28"], "pontos": [
                 P("Palacio Legislativo", "Av. de las Leyes",
-                  "Visita guiada só seg–sex; 10h ou 11h e 16h (fontes divergem); há aviso de horários especiais desde 22/12",
-                  "Estrangeiro paga; valor n/c", "30 a 45 min; elevador para cadeira de rodas",
+                  "Visita guiada seg–sex às 11h e 16h (2026); no verão passado foi 11h30 e 15h, confirmar",
+                  "US$ 3 ou UYU 140, só em dinheiro", "30 a 45 min, sem agendamento; elevador para cadeira de rodas",
                   link="https://www.descubrimontevideo.uy/palacio-legislativo"),
                 P("Mercado Agrícola (MAM)", "José L. Terra 2220", "Todos os dias 9h–22h; gastronomia 11h–23h", "Grátis",
                   "A cerca de 10 min a pé do Legislativo", link="https://www.mam.com.uy/",
@@ -440,7 +452,7 @@ CIDADES = {
              "sub": "Plano; da Plaza ao Tortoni 5 min, ao Barolo cerca de 15 min, ao Congreso 25 a 30 min",
              "dias": ["d29", "d31", "d01"], "pontos": [
                 P("Plaza de Mayo, Casa Rosada e Pirámide", "Balcarce 50", "Livre", "Grátis",
-                  "30 min; visita ao palácio para turistas n/c", mapa="Plaza de Mayo, Buenos Aires"),
+                  "30 min; visitas individuais ao palácio suspensas, segundo fonte secundária", mapa="Plaza de Mayo, Buenos Aires"),
                 P("Museo Casa Rosada", "Av. Paseo Colón 100", "Qua–dom 11h–18h (entrada até 17h30); fecha seg e ter",
                   "Grátis", "Rampas e elevadores",
                   link="https://www.argentina.gob.ar/secretariageneral/museo-casa-rosada/horarios-e-informacion"),
@@ -448,15 +460,16 @@ CIDADES = {
                   "Grátis", "Túmulo de San Martín; 30 min", mapa="Catedral Metropolitana de Buenos Aires"),
                 P("Cabildo", "Bolívar 65", "n/c; as fontes divergem", "n/c", "45 min",
                   mapa="Cabildo de Buenos Aires, Bolívar 65"),
-                P("Manzana de las Luces", "Perú 272", "Qua–dom 12h–19h (n/c); túneis fechados para restauro", "Grátis",
-                  "Visita guiada qua–sex 15h15 (n/c)"),
+                P("Manzana de las Luces", "Perú 272", "Visita guiada grátis qua–sex às 15h15, por ordem de chegada", "Grátis",
+                  "Túneis só sáb e dom, com horário online"),
                 P("Café Tortoni", "Av. de Mayo 825", "Todos os dias 8h–21h; 31/12 e 01/01 n/c", "Consumação",
                   "Chocolate com churros"),
-                P("Palacio Barolo", "Av. de Mayo 1370", "Tour às 10h e 15h, seg e qua–dom, em espanhol e inglês",
-                  "ARS 16.800", "Cerca de 1h30; muitos degraus; reservar", link="https://palaciobarolotours.com.ar"),
+                P("Palacio Barolo", "Av. de Mayo 1370", "Visitas seg e qua–dom, inclusive feriados; fecha terça",
+                  "ARS 54.000 para não residentes (≈ R$ 184)", "Cerca de 1h30 em espanhol e inglês; 8 andares de escada; reserva online",
+                  link="https://palaciobarolotours.com.ar/visitas-guiadas-diurnas/"),
                 P("Congreso", "Rivadavia 1864",
-                  "Visita guiada gratuita seg–sex, com reserva e documento; suspensa em dia de sessão", "Grátis",
-                  "Turnos na Câmara: 11h, 13h, 15h e 17h", mapa="Congreso de la Nación Argentina"),
+                  "Visita guiada gratuita com reserva online (vagas abrem 5 a 10 dias antes); suspensa em dia de sessão", "Grátis",
+                  "Cerca de 60 min, sem português; levar passaporte", mapa="Congreso de la Nación Argentina"),
             ]},
             {"letra": "B", "nome": "Teatro Colón e Obelisco",
              "sub": "Cerca de 10 min a pé entre eles; do bloco A, subte D ou Uber de 10 min", "dias": ["d02"], "pontos": [
@@ -473,7 +486,7 @@ CIDADES = {
                 P("Cementerio de la Recoleta", "Junín 1760",
                   "Todos os dias 9h–17h; visita guiada gratuita em espanhol seg–sex 10h–16h; em 31/12 e 01/01 "
                   "provavelmente fechado ao turismo (n/c)",
-                  "Estrangeiro paga: ARS 24.030 (blog, ago/2026); comprar no entradasba", "1 a 1h30"),
+                  "ARS 25.370 para estrangeiros (EntradasBA, set/2026); na porta, só cartão", "1 a 1h30"),
                 P("Centro Cultural Recoleta", "Junín 1930", "Ter–sex 12h30–21h; sáb, dom e feriados 10h15–21h", "Grátis",
                   "Colado ao cemitério"),
                 P("Floralis Genérica", "Plaza Naciones Unidas", "Livre", "Grátis", "7 a 10 min do cemitério",
@@ -492,11 +505,12 @@ CIDADES = {
                 P("MALBA", "Av. Figueroa Alcorta 3415",
                   "Seg e qui–dom 12h–20h; qua 11h–20h com metade do preço; ter fechado; fecha 01/01 e, em 24 e 31/12, às 18h",
                   "ARS 14.000 (site)", "1h30 a 2h", link="https://www.malba.org.ar/en/visitar"),
-                P("Museo Evita", "Lafinur 2988", "Ter–dom 11h–19h; segunda fechado", "ARS 9 a 11 mil (relatos de 2025; n/c)",
-                  "Cerca de 12 min a pé do MALBA"),
+                P("Museo Evita", "Lafinur 2988", "Ter–dom 11h–19h; fecha 24, 25 e 31/12 e 01/01", "ARS 17.000 para estrangeiros (≈ R$ 58)",
+                  "Audioguia em português; cerca de 12 min a pé do MALBA"),
                 P("Bosques de Palermo e Rosedal", "", "Abertos, sem entrada", "Grátis", "Abertos também em 01/01",
                   mapa="Rosedal de Palermo, Buenos Aires"),
-                P("Jardín Japonés", "", "Horário e preço n/c; pode fechar em 01/01", "n/c", "Conferir antes",
+                P("Jardín Japonés", "Av. Casares 3500", "Todos os dias 10h–18h45; 31/12 e 01/01 n/c", "ARS 24.000 para não residentes (≈ R$ 82)",
+                  "Ingresso só na bilheteria; não fecha com chuva",
                   mapa="Jardín Japonés, Buenos Aires"),
                 P("Palermo Soho e Hollywood", "Plaza Serrano, Honduras, Gorriti",
                   "Restaurantes e bares abertos à noite; comércio fecha em 01/01", "Grátis",
@@ -532,11 +546,12 @@ CIDADES = {
         ],
         "extras": [
             {"nome": "Salón 1923 (rooftop do Palacio Barolo)", "onde": "Av. de Mayo 1370, 16º andar", "quando": "Sex 01/01, 19h",
-             "info": "Qua 18h30, 20h e 21h30; qui a seg 19h e 21h; sex a seg 17h. Reserva obrigatória. Preço n/c; abertura em 01/01 n/c.",
-             "link": "https://salon1923.com/en/", "whatsapp": "+54 9 11 3779-8847"},
+             "info": "Quarta a segunda (fecha terça). Coquetéis qua 18h30, 20h e 21h30; tapeo qui a seg 19h e 21h; lanche sex a "
+                     "seg 17h. Reserva obrigatória e paga antecipado. Preço da sessão n/c; abertura em 01/01 n/c.",
+             "link": "https://salon1923.com/", "whatsapp": "+54 9 11 3779-8847"},
             {"nome": "Ecoparque", "onde": "Av. Sarmiento 2601, Palermo", "quando": "Sex 01/01, 14h",
-             "info": "Grátis; ter a dom e feriados, 11h–18h (dado de 2025); fecha na chuva; 2.000 pessoas por dia, com reserva de ingresso.",
-             "link": "https://turismo.buenosaires.gob.ar/en/otros-establecimientos/buenos-aires-eco-park"},
+             "info": "ARS 22.650 por estrangeiro desde junho/2026; ingresso por data no site. Terça a domingo e feriados, 11h–17h30; fecha com chuva.",
+             "link": "https://ecoparque.buenosaires.gob.ar/ticketera/elegir/ecoparque-entrada-general"},
             {"nome": "Museo Nacional de Arte Decorativo (Palacio Errázuriz)", "onde": "Av. del Libertador 1902, Palermo",
              "quando": "Qua 30/12, 14h30 (opção)",
              "info": "Qua a dom, 13h–19h; grátis; visita guiada às 16h (dado de um guia de turismo; confirmar).",
@@ -546,7 +561,7 @@ CIDADES = {
              "link": "https://www.tripadvisor.com/Restaurant_Review-g312741-d9837799-Reviews-Green_Eat-Buenos_Aires_Capital_Federal_District.html"},
             {"nome": "Barolo Gourmet (visita guiada com gastronomia)", "onde": "Palacio Barolo, Av. de Mayo 1370",
              "quando": "Opção ao Salón, qui e sex às 20h",
-             "info": "Cerca de 1 h, termina no rooftop; preço n/c.",
+             "info": "Quinta e sexta, 18h30–21h: visita, 1 tapa e 1 drink no rooftop. ARS 88.000 para não residentes (≈ R$ 299).",
              "link": "https://palaciobarolotours.com.ar/barolo-gourmet/", "whatsapp": "+54 9 11 6915-2385"},
         ],
         "fora": ("Ficaram fora do roteiro a pé: Campanópolis (aldeia medieval em González Catán, na Grande Buenos "
@@ -568,7 +583,7 @@ RESTAURANTES = [
     # Montevidéu — carnes
     R("La Pulpería", "mvd", "carnes", "Lagunillas 448, Punta Carretas",
       "Entraña, ojo de bife, vacío, provoleta, boniato al plomo", "Médio a alto", "TA 4,6",
-      "Não aceita reserva (só fila); segunda fechada; horários divergem entre site e TA", "Dom 27/12",
+      "Não aceita reserva (só fila); jantar só ter–sex, almoço sáb–dom; fecha segunda", "Almoço de dom 27/12 (opção)",
       link="https://lapulperia.com.uy"),
     R("Garcia Parrilla", "mvd", "carnes", "Guipuzcoa 331, Punta Carretas", "Baby beef", "Muito alto", "TA 4,3",
       "Aberta todos os dias, 9h–2h; reserva recomendada", "Seg 28/12"),
@@ -578,8 +593,8 @@ RESTAURANTES = [
       "Asado clássico; a Chacra é rápida e o Peregrino, mais aconchegante",
       "Prato de R$ 72 a 120; parrillada para dois de R$ 180 a 264 (Dicas do Uruguai, 2026)", "", "n/c",
       "Dom 27/12 (opção)", mapa="Mercado del Puerto, Montevideo"),
-    R("La Perdiz", "mvd", "carnes", "Pocitos", "Grelhados e milanesas", "Médio a alto", "TA 4,3",
-      "Reserva recomendada", "Sáb 26/12", mapa="La Perdiz restaurante Pocitos Montevideo"),
+    R("La Perdiz", "mvd", "carnes", "Guipúzcoa 350, Punta Carretas", "Grelhados e milanesas", "Cerca de US$ 20 por prato", "TA 4,3",
+      "Só por telefone", "Sáb 26/12", mapa="La Perdiz Restaurant, Guipúzcoa 350, Montevideo"),
     # Montevidéu — restaurantes e chivito
     R("Primuseum", "mvd", "restaurantes", "Ciudad Vieja", "Jantar com tango", "Muito alto", "TA 4,8"),
     R("Es Mercat", "mvd", "restaurantes", "Montevidéu", "Frutos do mar", "", "TA 4,5", mapa="Es Mercat Montevideo"),
@@ -591,10 +606,10 @@ RESTAURANTES = [
     # Montevidéu — cafés
     R("Café Brasilero", "mvd", "cafes", "Ituzaingó 1447", "Desde 1877", "Seg–sex 8h30–19h, sáb 10h–19h, domingo fechado",
       "", "", "Seg 28/12"),
-    R("Baar Fun Fun", "mvd", "cafes", "Ciudadela 1229", "Desde 1895, com uvita", "", "", "Reserva no site",
-      "Dom 27/12 e Seg 28/12"),
+    R("Baar Fun Fun", "mvd", "cafes", "Ciudadela 1229", "Desde 1895, com uvita e tango ao vivo", "Ticket artístico + consumo", "", "Formulário no site",
+      "Só sáb 26/12 à noite (fecha dom e seg)"),
     R("El Facal", "mvd", "cafes", "18 de Julio esq. Yi", "Café clássico da avenida", "", "", "",
-      "Alternativa no Dom 27/12", mapa="El Facal, 18 de Julio y Yi, Montevideo"),
+      "Dom 27/12, 17h", mapa="El Facal, 18 de Julio y Yi, Montevideo"),
     # Montevidéu — sorvetes
     R("Las Delicias", "mvd", "sorvetes", "21 de Setiembre 2729, Pocitos", "", "", "", "", "Sáb 26/12"),
     R("La Cigale", "mvd", "sorvetes", "Ciudad Vieja, 18 de Julio 1179 e Pocitos", "", "", "TA 4,1 a 4,2", "", "Dom 27/12",
@@ -749,20 +764,20 @@ TRAVESSIA_INTRO = ("A travessia é feita por ferry, em duas empresas; não há s
                    "esgota: comprem as seis passagens juntas em outubro ou novembro.")
 
 TRAVESSIA = [
-    {"nome": "Buquebus direta", "detalhe": "Navio Francisco", "duracao": "2h15 a 2h30", "preco": "USD 90 a 220",
+    {"nome": "Buquebus direta", "detalhe": "Navio Francisco", "duracao": "2h15 a 2h30", "preco": "UYU 3.222 a 6.496 (≈ R$ 420 a 845)",
      "texto": "Sai do porto de Montevidéu (Rambla 25 de Agosto de 1825) e chega a Puerto Madero (Av. Antártida "
-              "Argentina 821). Horários de referência: 11h e 19h30 (agregador sem data).",
+              "Argentina 821). Em 29/12: saídas às 11h (chega 13h45) e 20h (chega 22h45).",
      "no_roteiro": True, "link": "https://www.buquebus.com"},
-    {"nome": "Buquebus via Colonia", "detalhe": "Ônibus e navio", "duracao": "Cerca de 4h30", "preco": "USD 60 a 140",
-     "texto": "Horários de referência: 7h e 13h45 (agregador sem data).", "link": "https://www.buquebus.com"},
-    {"nome": "Colonia Express", "detalhe": "Ônibus e ferry via Colonia", "duracao": "Cerca de 3h30", "preco": "USD 60 a 140",
+    {"nome": "Buquebus via Colonia", "detalhe": "Ônibus e navio", "duracao": "Cerca de 4h30", "preco": "UYU 2.580 a 2.969 (≈ R$ 335 a 386)",
+     "texto": "Em 29/12: UYU 2.580 a 2.969 por pessoa (site oficial, consulta de 29/09/2026).", "link": "https://www.buquebus.com"},
+    {"nome": "Colonia Express", "detalhe": "Ônibus e ferry via Colonia", "duracao": "Cerca de 4h45", "preco": "UYU 3.676 a 4.251 (≈ R$ 478 a 553)",
      "texto": "Ônibus do Terminal Tres Cruces; chegada em Puerto Madero Sur (Av. Elvira Rawson de Dellepiane 155). "
-              "Horários de set/out: 5h, 7h, 13h, 14h30 e 17h; dezembro não publicado.",
+              "Em 29/12: saídas às 6h (chega 10h45) e 14h30 (chega 19h15).",
      "link": "https://www.coloniaexpress.com/uy/Horarios"},
 ]
 
 TRAVESSIA_NOTAS = [
-    "Preços de agregadores de dezembro de 2025; mudam com a demanda e no pico de fim de ano há sobretaxa de 20 a 40%.",
+    "Preços dos sites oficiais para 29/12/2026, consultados em 29/09/2026; são dinâmicos e sobem perto da data.",
     "Comprem só nos sites oficiais (buquebus.com e coloniaexpress.com).",
     "Cheguem ao terminal de 1h30 a 2h antes; a imigração é feita ali, e a taxa migratória uruguaia (cerca de USD 2,10) já vem no bilhete.",
     "Bagagem citada: 20 kg despachados na Buquebus e 30 kg na Colonia Express (agregador; n/c nos sites oficiais).",
@@ -779,8 +794,8 @@ REVEILLON = [
     {"letra": "B", "nome": "Palermo, para quem quer carne",
      "lugar": "La Carnicería (ARS 200 mil; pequena, reservar cedo) ou Lo de Jesús (ARS 150 mil)",
      "preco": "Cerca de R$ 510 a 680", "obs": "Volta de Uber, com tarifa alta"},
-    {"letra": "C", "nome": "Costanera Norte, com festa", "lugar": "Enero (Av. Rafael Obligado 6710)",
-     "preco": "USD 125 a 150, com open bar e DJ", "obs": "Show prometido pela casa; n/c"},
+    {"letra": "C", "nome": "Costanera Norte, com festa", "lugar": "Enero (Av. Rafael Obligado 7180)",
+     "preco": "US$ 150, com open bar e DJ (≈ R$ 825)", "obs": "Música ao vivo, DJ, fogos e estacionamento em 2025"},
 ]
 
 REVEILLON_NOTAS = [

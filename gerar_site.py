@@ -27,6 +27,7 @@ from urllib.parse import quote_plus
 
 import cenas
 import dados
+import reservas as res_dados
 
 RAIZ = Path(__file__).resolve().parent
 MODELO = RAIZ / "modelo"
@@ -55,11 +56,12 @@ PAGINAS = [
     ("inicio", "Início", "casa", "sol", None, ""),
     ("roteiro", "Roteiro dia a dia", "calendario", "laranja", "letras", "Um dia de cada vez"),
     ("buscar", "Buscar o que fazer", "lupa", "rosa", None, "Por dia, cidade ou tipo"),
+    ("reservas", "Reservas", "ticket", "vermelho", "colon", "Links, contatos, prazos e valores"),
     ("montevideu", "Montevidéu", "cidade", "azul", "rambla", "Cultura e passeios de A a E"),
     ("buenos-aires", "Buenos Aires", "cidade", "celeste", "obelisco", "Tango, filete e passeios de A a G"),
-    ("comer", "Onde comer", "comida", "vermelho", "asado", "Parrillas, cafés e sorveterias"),
+    ("comer", "Onde comer", "comida", "laranja", "asado", "Parrillas, cafés e sorveterias"),
     ("travessia", "Travessia e Réveillon", "navio", "roxo", "puente-mujer", "Ferry e a noite de Ano-Novo"),
-    ("compras", "Compras", "feira", "laranja", "filete", "Couro, mate, alfajor e tax free"),
+    ("compras", "Compras", "feira", "cafe", "filete", "Couro, mate, alfajor e tax free"),
     ("antes", "Antes de ir", "documento", "verde", "mate", "Documentos, dinheiro e conversor"),
     ("seguranca", "Segurança", "escudo", "celeste", "san-telmo", "Acessibilidade e cuidados"),
     ("pendencias", "Checklist", "check", "verde", None, "Reservas que não podem esperar"),
@@ -178,6 +180,114 @@ def pagina(id_, conteudo):
 
 
 # ---------------------------------------------------------------------------
+# Reservas
+# ---------------------------------------------------------------------------
+PRECISA = {
+    "obrigatória": ("Reserva obrigatória", "obrigatoria"),
+    "recomendada": ("Reserva recomendada", "recomendada"),
+    "não aceita": ("Não aceita reserva", "nao-aceita"),
+    "não precisa": ("Sem reserva", "nao-precisa"),
+}
+TIPO_RESERVA = {"Restaurante": "comida", "Atração": "cultura", "Transporte": "mov", "Réveillon": "festa"}
+
+for _r in res_dados.RESERVAS:
+    _dias = _r.get("antecedencia_dias")
+    _r["prazo"] = ((dt.date.fromisoformat(_r["uso"]) - dt.timedelta(days=_dias)).isoformat()
+                   if _r.get("uso") and isinstance(_dias, int) else None)
+
+
+def valido(v):
+    return bool(v) and str(v).strip().lower() not in ("n/c", "-", "")
+
+
+def reservas_em(tipo, nome):
+    return [r for r in res_dados.RESERVAS if nome in r.get("em", {}).get(tipo, [])]
+
+
+def contato_copiavel(rotulo, valor, href, acao):
+    digitos = re.sub(r"[^0-9+@._a-zA-Z-]", "", valor)
+    return (f'<span class="zap">{e(rotulo)}: <code>{e(valor)}</code>'
+            f'<button class="copiar" type="button" data-copiar="{e(digitos)}">Copiar</button>'
+            f'<a class="lk lk-site" href="{e(href)}">{e(acao)}</a></span>')
+
+
+def contatos_reserva(r, completo=True):
+    partes = []
+    if valido(r.get("link")):
+        rotulo = "Reservar" if r["precisa"] in ("obrigatória", "recomendada") else "Site oficial"
+        partes.append(link_site(r["link"], rotulo))
+    if valido(r.get("whatsapp")):
+        partes.append(whatsapp(r["whatsapp"]))
+    if completo:
+        if valido(r.get("telefone")):
+            partes.append(contato_copiavel("Telefone", r["telefone"], "tel:" + re.sub(r"[^0-9+]", "", r["telefone"]), "Ligar"))
+        if valido(r.get("email")):
+            partes.append(contato_copiavel("E-mail", r["email"], "mailto:" + r["email"], "Escrever"))
+        if valido(r.get("instagram")):
+            usuario = r["instagram"].lstrip("@")
+            partes.append(link_site(f"https://www.instagram.com/{usuario}/", "@" + usuario))
+    return "".join(partes)
+
+
+def selo_precisa(r):
+    rotulo, cls = PRECISA.get(r["precisa"], ("Reserva n/c", "nc"))
+    return f'<span class="precisa precisa--{cls}">{e(rotulo)}</span>'
+
+
+def prazo_html(r):
+    if not r.get("prazo"):
+        return ""
+    return (f'<p class="prazo" data-limite="{r["prazo"]}"><b>Reservar até {ddmm(r["prazo"])}</b>'
+            f'<span class="prazo-status"></span></p>')
+
+
+def reserva_mini(r):
+    linhas = [("Antecedência", r.get("antecedencia")), ("Valor", r.get("valor"))]
+    dl = "".join(f"<dt>{k}</dt><dd>{rico(v)}</dd>" for k, v in linhas if valido(v))
+    return (f'<div class="reserva-mini">'
+            f'<div class="reserva-mini-topo">{cenas.icone("ticket")}{selo_precisa(r)}{prazo_html(r)}</div>'
+            f'{f"<dl>{dl}</dl>" if dl else ""}'
+            f'<div class="links">{contatos_reserva(r, completo=False)}'
+            f'<a class="lk" href="#res-{r["chave"]}">Todos os contatos{cenas.icone("dir")}</a></div></div>')
+
+
+def reservas_mini(tipo, nome):
+    return "".join(reserva_mini(r) for r in reservas_em(tipo, nome))
+
+
+def atalhos_reserva(dia_id, p):
+    texto = p["titulo"] + " " + p["texto"]
+    achados = [r for r in res_dados.RESERVAS
+               if dia_id in r.get("em", {}).get("dia", []) and any(t in texto for t in r.get("termos", [r["nome"]]))]
+    if not achados:
+        return ""
+    itens = "".join(f'<a class="atalho-reserva" href="#res-{r["chave"]}">{cenas.icone("ticket")}{e(r["nome"])}</a>'
+                    for r in achados)
+    return f'<div class="atalhos-reserva"><span>Como reservar:</span>{itens}</div>'
+
+
+def reserva_card(r):
+    cidade_nome = CIDADE_NOME.get(r["cidade"], "")
+    linhas = [("Como", r.get("como")), ("Antecedência", r.get("antecedencia")), ("Valor", r.get("valor")),
+              ("Observações", r.get("obs"))]
+    dl = "".join(f"<dt>{k}</dt><dd>{rico(v)}</dd>" for k, v in linhas if valido(v))
+    dominios = []
+    for u in r.get("fontes", []):
+        m = re.match(r"https?://(?:www\.)?([^/]+)", u)
+        if m and m.group(1) not in [d for d, _ in dominios]:
+            dominios.append((m.group(1), u))
+    fontes = ", ".join(f'<a href="{e(u)}" target="_blank" rel="noopener">{e(d)}</a>' for d, u in dominios[:4])
+    confianca = f' · confiança {e(r["confianca"])}' if valido(r.get("confianca")) else ""
+    cor = {"mvd": "azul", "ba": "celeste"}.get(r["cidade"], "sol")
+    rodape_fontes = f'<p class="fonte">Fontes: {fontes}{confianca}</p>' if fontes else ""
+    return (f'<article class="reserva cor-{cor}" id="res-{r["chave"]}" data-precisa="{e(r["precisa"])}" data-cidade="{r["cidade"]}">'
+            f'<div class="reserva-topo"><span class="tag">{e(r["categoria"])} · {e(cidade_nome)}</span>{selo_precisa(r)}</div>'
+            f'<h3>{e(r["nome"])}</h3><p class="reserva-uso">{rico(r.get("quando", ""))}</p>'
+            f'{prazo_html(r)}<dl>{dl}</dl>'
+            f'<div class="links">{contatos_reserva(r)}</div>{rodape_fontes}</article>')
+
+
+# ---------------------------------------------------------------------------
 # Topo e menu lateral
 # ---------------------------------------------------------------------------
 def topo():
@@ -274,9 +384,10 @@ def inicio(hoje):
 # ---------------------------------------------------------------------------
 # Roteiro
 # ---------------------------------------------------------------------------
-def parada(p):
+def parada(p, dia_id=""):
     tipo = p["tipo"]
     reserva = '<span class="selo-reserva">Reservar</span>' if p.get("reserva") else ""
+    atalhos = atalhos_reserva(dia_id, p)
     links = "".join(link_mapa(q, r) for r, q in p.get("mapas", []))
     links += "".join(link_site(u, r) for r, u in p.get("links", []))
     if p.get("whatsapp"):
@@ -287,7 +398,7 @@ def parada(p):
             f'<span class="bolinha" title="{e(TIPOS[tipo])}">{cenas.icone(tipo)}'
             f'<span class="visually-hidden">{e(TIPOS[tipo])}: </span></span>'
             f'<div><span class="hora">{e(p["hora"])}</span><h4>{rico(p["titulo"])}{reserva}</h4>'
-            f'<p>{rico(p["texto"])}</p>{links_html}</div>{mini}</li>')
+            f'<p>{rico(p["texto"])}</p>{atalhos}{links_html}</div>{mini}</li>')
 
 
 def cartao_dia(d, n):
@@ -299,7 +410,7 @@ def cartao_dia(d, n):
     if d.get("aviso"):
         t, texto = d["aviso"]
         aviso = f'<div class="aviso"><b>{e(t)}</b>{rico(texto)}</div>'
-    paradas = "".join(parada(p) for p in d["paradas"])
+    paradas = "".join(parada(p, d["id"]) for p in d["paradas"])
     anterior = dados.DIAS[n - 2] if n > 1 else None
     proximo = dados.DIAS[n] if n < len(dados.DIAS) else None
     nav = '<nav class="dia-nav" aria-label="Outros dias">'
@@ -373,7 +484,7 @@ def ficha(p, cidade_mapa):
             f'<dt>Horário</dt><dd>{rico(p["horario"])}</dd>'
             f'<dt>Entrada</dt><dd>{rico(p["entrada"])}</dd>'
             f'<dt>Dica</dt><dd>{rico(p["obs"])}</dd></dl>'
-            f'<div class="links">{links}</div></div>')
+            f'<div class="links">{links}</div>{reservas_mini("ponto", p["nome"])}</div>')
 
 
 def cabecalho_bloco(letra, nome, sub, dias_html, contagem):
@@ -428,7 +539,8 @@ def cidade(chave, ancora):
             itens.append(
                 f'<div class="extra" id="extra-{slug(x["nome"])}"><span class="quando">{e(x["quando"])}</span><h4>{e(x["nome"])}</h4>'
                 f'<p class="end">{e(x["onde"])}</p><p>{rico(x["info"])}</p>'
-                f'<div class="links">{link_mapa(x["onde"] + ", " + c["cidade_mapa"])}{link_site(x["link"], "Página")}{zap}</div></div>')
+                f'<div class="links">{link_mapa(x["onde"] + ", " + c["cidade_mapa"])}{link_site(x["link"], "Página")}{zap}</div>'
+                f'{reservas_mini("extra", x["nome"])}</div>')
         n = len(c["extras"])
         blocos += (f'<details class="bloco" id="{chave}-extras">'
                    f'{cabecalho_bloco("+", "Extras dos vídeos", "Lugares dos vídeos que entraram no roteiro, alguns como opção.", "", f"{n} lugares")}'
@@ -476,7 +588,7 @@ def restaurante(r):
             f'<div class="rest-faixa"><span>{cenas.icone(ICONE_CATEGORIA[r["cat"]])}{e(cat)}</span>'
             f'<span class="pais">{e(cid["nome"])}</span></div>'
             f'<h3>{e(r["nome"])}</h3><p class="onde">{rico(r["onde"])}</p>'
-            f'{f"<dl>{dl}</dl>" if dl else ""}{dia}<div class="links">{links}</div></article>')
+            f'{f"<dl>{dl}</dl>" if dl else ""}{dia}<div class="links">{links}</div>{reservas_mini("rest", r["nome"])}</article>')
 
 
 def chips(grupo, itens, attr="data-filtro"):
@@ -538,7 +650,7 @@ def travessia():
             f'<div class="opcao{" escolhida" if o.get("no_roteiro") else ""}">{rot}<h4>{e(o["nome"])}</h4>'
             f'<p class="det">{e(o["detalhe"])}</p><div class="numeros">'
             f'<div><small>Duração</small><b>{e(o["duracao"])}</b></div><div><small>Por pessoa</small><b>{e(o["preco"])}</b></div></div>'
-            f'<p>{rico(o["texto"])}</p><div class="links">{link_site(o["link"])}</div></div>')
+            f'<p>{rico(o["texto"])}</p><div class="links">{link_site(o["link"])}</div>{reservas_mini("travessia", o["nome"])}</div>')
     notas = "".join(f"<li>{rico(n)}</li>" for n in dados.TRAVESSIA_NOTAS)
     ferry = f"""
 <div class="wrap">
@@ -553,7 +665,7 @@ def travessia():
     rev_opcoes = "".join(
         f'<div class="opcao"><h4><span class="letra-op">{r["letra"]}.</span> {e(r["nome"])}</h4><p>{rico(r["lugar"])}</p>'
         f'<div class="numeros"><div><small>Por pessoa (2025)</small><b>{e(r["preco"])}</b></div></div>'
-        f'<p class="det">{rico(r["obs"])}</p></div>'
+        f'<p class="det">{rico(r["obs"])}</p>{reservas_mini("reveillon", r["letra"])}</div>'
         for r in dados.REVEILLON)
     rev_notas = "".join(f'<div class="nota"><h4>{e(t)}</h4><p>{rico(x)}</p></div>' for t, x in dados.REVEILLON_NOTAS)
     noite = f"""
@@ -562,8 +674,73 @@ def travessia():
   {titulo_secao("¡Feliz Año Nuevo!", "Réveillon em Buenos Aires", dados.REVEILLON_INTRO)}
   <div class="opcoes">{rev_opcoes}</div>
   <div class="notas">{rev_notas}</div>
+  {verificacao_reveillon()}
 </div>"""
     return pagina("travessia", faixa("celeste", ferry, "var(--noite)") + faixa("noite", noite, id_="reveillon"))
+
+
+def verificacao_reveillon():
+    v = res_dados.REVEILLON_VERIFICACAO
+    if not v:
+        return ""
+    p = v.get("principal") or {}
+    linhas = [("O que inclui", p.get("inclui")), ("Preço por pessoa", p.get("preco_pessoa")),
+              ("Em reais", p.get("preco_reais")), ("Para 6 pessoas", p.get("total_6")), ("Horário", p.get("horario")),
+              ("Pagamento", p.get("prepago")), ("Como reservar", p.get("como_reservar")),
+              ("Antecedência", p.get("antecedencia")), ("Observações", p.get("obs"))]
+    dl = "".join(f"<dt>{k}</dt><dd>{rico(x)}</dd>" for k, x in linhas if valido(x))
+    contato = {"link": p.get("link"), "whatsapp": p.get("whatsapp"), "telefone": p.get("telefone"),
+               "email": p.get("email"), "instagram": p.get("instagram"), "precisa": "obrigatória"}
+    principal = ""
+    if valido(p.get("nome")):
+        principal = (f'<div class="verif-principal"><h4>{e(p["nome"])}</h4>'
+                     f'<p class="end">{rico(p.get("endereco", ""))}</p><dl>{dl}</dl>'
+                     f'<div class="links">{contatos_reserva(contato)}</div></div>')
+    linhas_alt = "".join(
+        f'<tr><th scope="row">{e(a.get("nome", ""))}<small>{rico(a.get("bairro", ""))}</small></th>'
+        f'<td>{rico(a.get("inclui", ""))}</td><td>{rico(a.get("preco_pessoa", ""))}<small>{rico(a.get("preco_reais", ""))}</small></td>'
+        f'<td><b>{rico(a.get("total_6", ""))}</b></td>'
+        f'<td>{link_site(a["link"], "Site") if valido(a.get("link")) else rico(a.get("contato", "n/c"))}</td></tr>'
+        for a in v.get("alternativas", []))
+    tabela = (f'<div class="tabela-rolar"><table class="orcamento"><caption>Orçamento para 6 pessoas</caption>'
+              f'<thead><tr><th scope="col">Lugar</th><th scope="col">Inclui</th><th scope="col">Por pessoa</th>'
+              f'<th scope="col">Total (6)</th><th scope="col">Reserva</th></tr></thead><tbody>{linhas_alt}</tbody></table></div>'
+              if linhas_alt else "")
+    nota = f'<p class="nota-verif">{rico(v["nota"])}</p>' if v.get("nota") else ""
+    return (f'<div class="verificacao" id="reveillon-220"><span class="script">Verificamos para vocês</span>'
+            f'<h3>Réveillon por cerca de R$ 220, com bebidas, em Puerto Madero?</h3>'
+            f'<p class="veredito"><b>{e(v.get("veredito", ""))}.</b> {rico(v.get("explicacao", ""))}</p>'
+            f'{principal}{tabela}{nota}</div>')
+
+
+def reservas():
+    lista = sorted(res_dados.RESERVAS, key=lambda r: (r.get("prazo") is None, r.get("prazo") or "", r.get("uso") or "9999"))
+    cards = "".join(reserva_card(r) for r in lista if r["precisa"] in ("obrigatória", "recomendada", "n/c"))
+    sem = [r for r in lista if r["precisa"] in ("não aceita", "não precisa")]
+    sem_html = ""
+    if sem:
+        sem_html = ('<div class="sub-titulo"><h3>Sem reserva</h3><span class="script">é só chegar</span></div>'
+                    f'<div class="reservas-lista">{"".join(reserva_card(r) for r in sem)}</div>')
+    n_obr = sum(1 for r in lista if r["precisa"] == "obrigatória")
+    n_rec = sum(1 for r in lista if r["precisa"] == "recomendada")
+    cidades = [("todas", "Todas", ""), ("mvd", "Montevidéu", "cor-azul"), ("ba", "Buenos Aires", "cor-celeste")]
+    conteudo = f"""
+<div class="wrap">
+  {titulo_secao("Links, contatos, prazos e valores", "Reservas",
+                "Ordenadas pelo prazo sugerido: o prazo é a data do passeio menos a antecedência indicada pelo próprio lugar ou por relatos recentes. Valores e regras mudam; confiram no link antes de pagar.")}
+  <ul class="pilulas res-resumo">
+    <li class="pilula cor-vermelho">{n_obr} obrigatórias</li>
+    <li class="pilula cor-laranja">{n_rec} recomendadas</li>
+    <li class="pilula cor-sol" id="res-proximo" hidden></li>
+  </ul>
+  <div class="filtros"><div class="filtro-linha" role="group" aria-label="Filtrar reservas por cidade"><span>Cidade</span>{chips("cidade", cidades, "data-rfiltro")}</div></div>
+  <div class="reservas-lista">{cards}</div>
+  {sem_html}
+  <a class="verif-atalho" href="#reveillon-220"><span class="script">Verificamos para vocês</span>
+    <strong>Réveillon por cerca de R$ 220, com bebidas, em Puerto Madero?</strong>
+    <span>Veja o resultado e o orçamento de 7 opções para 6 pessoas {cenas.icone("dir")}</span></a>
+</div>"""
+    return pagina("reservas", faixa("rosa", conteudo))
 
 
 # ---------------------------------------------------------------------------
@@ -624,6 +801,7 @@ def pendencias():
                 "Reservas e confirmações na ordem em que travam. As marcações ficam salvas neste aparelho.")}
   <div class="duas">
     <div>
+      <p class="ver-reservas"><a class="lk" href="#reservas">{cenas.icone("ticket")}Ver links, contatos, prazos e valores das reservas{cenas.icone("dir")}</a></p>
       <div class="progresso"><span id="progresso-texto">0 de {len(dados.CHECKLIST)} feitos</span><span class="barra"><i id="progresso-barra"></i></span></div>
       <ul class="checklist">{itens}</ul>
     </div>
@@ -713,6 +891,13 @@ def indice_busca():
             itens.append({"k": "compra", "t": "feira", "c": chave, "d": dias_no_texto(onde + " " + obs),
                           "titulo": f"{cat}: {melhor}", "texto": f"{onde}. {obs}", "meta": "Compras",
                           "link": "#compras", "rotulo": "Ver compras"})
+    for r in res_dados.RESERVAS:
+        texto = ". ".join(x for x in (r.get("como"), r.get("antecedencia"), r.get("valor")) if valido(x))
+        itens.append({"k": "reserva", "t": TIPO_RESERVA.get(r["categoria"], "rua"), "c": r["cidade"],
+                      "d": r.get("em", {}).get("dia", []) or dias_no_texto(r.get("quando", "")),
+                      "titulo": f'{PRECISA.get(r["precisa"], ("Reserva",))[0]}: {r["nome"]}', "texto": texto,
+                      "meta": r.get("quando", ""), "link": f'#res-{r["chave"]}', "rotulo": "Ver reserva",
+                      "mapa": r["link"] if valido(r.get("link")) else ""})
     for n, it in enumerate(itens):
         it["o"] = n
     return itens
@@ -774,7 +959,7 @@ def montar(hoje):
     corpo = ('<script>document.documentElement.classList.add("js")</script>\n'
              f'<div id="app" data-inicio="{v["inicio"]}" data-fim="{v["fim"]}">\n'
              f'{topo()}\n{gaveta()}\n<main>'
-             f'{inicio(hoje)}{roteiro()}{buscar()}{cidade("mvd", "montevideu")}{cidade("ba", "buenos-aires")}'
+             f'{inicio(hoje)}{roteiro()}{buscar()}{reservas()}{cidade("mvd", "montevideu")}{cidade("ba", "buenos-aires")}'
              f'{comer()}{travessia()}{compras()}{antes()}{seguranca()}{pendencias()}{fontes()}'
              f'</main>\n{rodape(hoje)}\n</div>\n<script>\n{js}\n</script>\n')
     return cabeca, corpo
