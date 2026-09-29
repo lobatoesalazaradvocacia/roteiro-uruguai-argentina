@@ -19,7 +19,7 @@
   var app = $("#app");
   if (!app) return;
 
-  // ---------- Contagem regressiva e "hoje" ----------
+  // ---------- Datas: contagem regressiva e "hoje" ----------
   function isoLocal(d) {
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
@@ -28,46 +28,94 @@
   }
   var hoje = isoLocal(new Date());
   var faltam = diasEntre(hoje, app.dataset.inicio);
+  var cartaoHoje = $('.dia[data-data="' + hoje + '"]');
   var contagem = $("#contagem"), num = $("#contagem-num"), rot = $("#contagem-rot");
   if (faltam > 0) {
     num.textContent = String(faltam);
     rot.innerHTML = (faltam === 1 ? "dia para" : "dias para") + " embarcar<small>26 de dezembro, Montevidéu</small>";
     $$("[data-faltam]").forEach(function (el) { el.textContent = String(faltam); });
-  } else if (hoje <= app.dataset.fim) {
-    var cartao = $('.dia[data-data="' + hoje + '"]');
-    var chip = $('.dia-chip[data-data="' + hoje + '"]');
-    if (cartao) {
-      cartao.classList.add("hoje");
-      if (chip) chip.classList.add("hoje");
-      contagem.classList.add("ao-vivo");
-      contagem.setAttribute("href", "#" + cartao.id);
-      num.textContent = "Hoje";
-      rot.innerHTML = cartao.dataset.titulo + "<small>toque para ver o roteiro do dia</small>";
-    }
-  } else {
+  } else if (cartaoHoje) {
+    cartaoHoje.classList.add("hoje");
+    $$('[data-data="' + hoje + '"]').forEach(function (el) { el.classList.add("hoje"); });
+    contagem.classList.add("ao-vivo");
+    contagem.setAttribute("href", "#" + cartaoHoje.id);
+    num.textContent = "Hoje";
+    rot.innerHTML = cartaoHoje.dataset.titulo + "<small>toque para ver o roteiro do dia</small>";
+  } else if (hoje > app.dataset.fim) {
     num.textContent = "♥";
     rot.innerHTML = "Viagem concluída<small>que venha a próxima!</small>";
   }
   $$("[data-so-antes]").forEach(function (el) { el.hidden = faltam <= 0; });
 
-  // ---------- Menu: seção atual ----------
-  var links = $$(".menu a");
-  if ("IntersectionObserver" in window && links.length) {
-    var porId = {};
-    links.forEach(function (a) { porId[a.getAttribute("href").slice(1)] = a; });
-    var obs = new IntersectionObserver(function (entradas) {
-      entradas.forEach(function (en) {
-        if (!en.isIntersecting) return;
-        var a = porId[en.target.dataset.menu || en.target.id];
-        links.forEach(function (l) { l.removeAttribute("aria-current"); });
-        if (!a) return;
-        a.setAttribute("aria-current", "true");
-        var menu = a.parentElement;
-        menu.scrollTo({ left: a.offsetLeft - menu.clientWidth / 2 + a.clientWidth / 2, behavior: semMovimento ? "auto" : "smooth" });
-      });
-    }, { rootMargin: "-45% 0px -50% 0px" });
-    $$("main > section[id]").forEach(function (s) { obs.observe(s); });
+  // ---------- Menu lateral (três pontinhos) ----------
+  var gaveta = $("#gaveta"), fundo = $("#gaveta-fundo"), btnMenu = $("#btn-menu"), btnFechar = $("#btn-fechar");
+  function abrirMenu() {
+    gaveta.hidden = false; fundo.hidden = false;
+    requestAnimationFrame(function () { gaveta.classList.add("aberta"); fundo.classList.add("aberta"); });
+    btnMenu.setAttribute("aria-expanded", "true");
+    var atual = $('.gaveta-lista a[aria-current="true"]') || $(".gaveta-busca");
+    setTimeout(function () { atual.focus(); }, 60);
   }
+  function fecharMenu(devolverFoco) {
+    if (gaveta.hidden) return;
+    gaveta.classList.remove("aberta"); fundo.classList.remove("aberta");
+    btnMenu.setAttribute("aria-expanded", "false");
+    setTimeout(function () { gaveta.hidden = true; fundo.hidden = true; }, semMovimento ? 0 : 300);
+    if (devolverFoco) btnMenu.focus();
+  }
+  btnMenu.addEventListener("click", function () { gaveta.hidden ? abrirMenu() : fecharMenu(true); });
+  btnFechar.addEventListener("click", function () { fecharMenu(true); });
+  fundo.addEventListener("click", function () { fecharMenu(true); });
+  gaveta.addEventListener("click", function (ev) { if (ev.target.closest("a")) fecharMenu(false); });
+  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") fecharMenu(true); });
+
+  // ---------- Páginas (troca pelo endereço #) ----------
+  var paginas = $$(".pagina");
+  var dias = $$("#roteiro .dia");
+  var tituloAtual = $("#pagina-atual");
+  function diaPadrao() { return cartaoHoje || dias[0]; }
+  function mostrarDia(dia) {
+    dias.forEach(function (d) { d.classList.toggle("ativo", d === dia); });
+    $$(".dia-chip, .gaveta-dia").forEach(function (c) {
+      c.setAttribute("aria-current", String(c.getAttribute("href") === "#" + dia.id));
+    });
+    var chip = $('.dia-chip[href="#' + dia.id + '"]');
+    if (chip) chip.parentElement.scrollLeft = chip.offsetLeft - chip.parentElement.offsetLeft - 16;
+  }
+  function rota() {
+    var h = decodeURIComponent(location.hash.slice(1)) || "inicio";
+    var alvo = null;
+    try { alvo = document.getElementById(h); } catch (e) { alvo = null; }
+    var pag = alvo && (alvo.classList.contains("pagina") ? alvo : alvo.closest(".pagina"));
+    if (!pag) { pag = $("#inicio"); alvo = null; }
+    paginas.forEach(function (p) { p.classList.toggle("ativa", p === pag); });
+    tituloAtual.textContent = pag.id === "inicio" ? "" : pag.dataset.titulo;
+    document.title = (pag.id === "inicio" ? "" : pag.dataset.titulo + " · ") + "Roteiro Uruguai e Argentina";
+    $$(".gaveta-lista a").forEach(function (a) { a.setAttribute("aria-current", String(a.dataset.pagina === pag.id)); });
+    if (pag.id === "roteiro") {
+      mostrarDia(alvo && alvo.classList.contains("dia") ? alvo : diaPadrao());
+    } else {
+      $$(".gaveta-dia").forEach(function (c) { c.setAttribute("aria-current", "false"); });
+    }
+    if (alvo && alvo.tagName === "DETAILS") alvo.open = true;
+    if (alvo && alvo.classList.contains("rest") && alvo.hidden) {
+      filtro = { cidade: "todas", cat: "todas" };
+      aplicarFiltro();
+    }
+    if (pag.id === "buscar") buscar();
+    var rolarAte = alvo && alvo !== pag && !alvo.classList.contains("dia") ? alvo : null;
+    if (rolarAte) {
+      requestAnimationFrame(function () {
+        rolarAte.scrollIntoView({ block: "start" });
+        rolarAte.classList.remove("destaque");
+        void rolarAte.offsetWidth;
+        rolarAte.classList.add("destaque");
+      });
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }
+  window.addEventListener("hashchange", rota);
 
   // ---------- Onde comer: filtros ----------
   var filtro = guardar.ler("roteiro-filtro", { cidade: "todas", cat: "todas" });
@@ -95,6 +143,118 @@
     });
   });
   aplicarFiltro();
+
+  // ---------- Buscar ----------
+  var fonteIndice = $("#indice");
+  var BUSCA = fonteIndice ? JSON.parse(fonteIndice.textContent) : null;
+  var ROTULO_K = { parada: "No roteiro", ponto: "Ponto turístico", rest: "Onde comer", cultura: "Cultura", extra: "Extra dos vídeos", compra: "Compras" };
+  var ORDEM_K = { parada: 0, extra: 1, ponto: 2, rest: 3, cultura: 4, compra: 5 };
+  var estado = { q: "", dia: cartaoHoje ? cartaoHoje.id : dias[0].id, diaAuto: true, cidade: "todas", tipo: "tudo" };
+  var campo = $("#busca-q"), resultados = $("#resultados"), contBusca = $("#busca-contador"), limpar = $("#busca-limpar");
+  var LIMITE = 40, mostrarTodos = false;
+
+  function normalizar(s) {
+    return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  }
+  function esc(s) {
+    return String(s || "").replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; });
+  }
+  function icone(nome) {
+    return '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (BUSCA.icones[nome] || "") + "</svg>";
+  }
+  function destacar(texto, termos) {
+    var html = esc(texto);
+    termos.forEach(function (t) {
+      if (t.length < 2) return;
+      var re = new RegExp("(" + t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "gi");
+      html = html.replace(re, "<mark>$1</mark>");
+    });
+    return html.replace(/\bn\/c\b/g, '<abbr class="nc" title="não confirmado">n/c</abbr>');
+  }
+  function resumir(texto, max) {
+    return texto.length > max ? texto.slice(0, max).replace(/\s+\S*$/, "") + "…" : texto;
+  }
+  if (BUSCA) {
+    BUSCA.itens.forEach(function (it) {
+      it._txt = normalizar([it.titulo, it.texto, it.meta, BUSCA.tipos[it.t], ROTULO_K[it.k], BUSCA.cidades[it.c]].join(" "));
+    });
+  }
+  function marcarChips() {
+    $$(".chip[data-busca]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(estado[b.dataset.busca] === b.dataset.valor));
+    });
+    if (limpar) limpar.hidden = !estado.q;
+  }
+  function buscar() {
+    if (!BUSCA || !resultados) return;
+    marcarChips();
+    var termos = normalizar(estado.q).split(/\s+/).filter(Boolean);
+    var achados = BUSCA.itens.filter(function (it) {
+      if (estado.dia !== "todos" && (it.d || []).indexOf(estado.dia) < 0) return false;
+      if (estado.cidade !== "todas" && it.c !== estado.cidade) return false;
+      if (estado.tipo !== "tudo" && it.t !== estado.tipo) return false;
+      return termos.every(function (t) { return it._txt.indexOf(t) >= 0; });
+    });
+    achados.sort(function (a, b) { return (ORDEM_K[a.k] - ORDEM_K[b.k]) || (a.o - b.o); });
+    var partes = [];
+    if (estado.dia !== "todos") partes.push(BUSCA.dias[estado.dia]);
+    if (estado.cidade !== "todas") partes.push(BUSCA.cidades[estado.cidade]);
+    if (estado.tipo !== "tudo") partes.push(BUSCA.tipos[estado.tipo]);
+    if (estado.q) partes.push("“" + estado.q + "”");
+    contBusca.textContent = (achados.length === 1 ? "1 resultado" : achados.length + " resultados") + (partes.length ? " · " + partes.join(" · ") : "");
+    if (!achados.length) {
+      resultados.innerHTML = '<p class="vazio">Nada encontrado. Tentem outra palavra ou escolham “Todos os dias”.</p>';
+      return;
+    }
+    var lista = mostrarTodos ? achados : achados.slice(0, LIMITE);
+    var termosBrutos = estado.q.split(/\s+/).filter(Boolean);
+    resultados.innerHTML = lista.map(function (it) {
+      var links = '<a class="lk" href="' + esc(it.link) + '">' + esc(it.rotulo) + icone("dir") + "</a>";
+      if (it.mapa) links += '<a class="lk" href="' + esc(it.mapa) + '" target="_blank" rel="noopener">' + icone("mapa") + "Ver no mapa</a>";
+      var dias = (it.d || []).map(function (d) { return BUSCA.dias[d]; }).join(", ");
+      var meta = it.k === "parada" ? esc(it.meta) : esc(it.meta) + (dias ? " · " + esc(dias) : "");
+      return '<article class="res" data-tipo="' + esc(it.t) + '">' +
+        '<span class="bolinha" title="' + esc(BUSCA.tipos[it.t]) + '">' + icone(it.t) + "</span>" +
+        '<div><p class="res-meta"><span class="res-k">' + esc(ROTULO_K[it.k]) + "</span>" + meta +
+        " · " + esc(BUSCA.cidades[it.c] || "") + "</p>" +
+        "<h3>" + destacar(it.titulo, termosBrutos) + "</h3>" +
+        "<p>" + destacar(resumir(it.texto, 220), termosBrutos) + "</p>" +
+        '<div class="links">' + links + "</div></div>" +
+        (it.foto ? '<img class="mini" src="' + esc(it.foto) + '" alt="" loading="lazy">' : "") +
+        "</article>";
+    }).join("") + (achados.length > lista.length
+      ? '<button class="chip mais" type="button" id="ver-mais">Ver mais ' + (achados.length - lista.length) + " resultados</button>" : "");
+    var mais = $("#ver-mais");
+    if (mais) mais.addEventListener("click", function () { mostrarTodos = true; buscar(); });
+  }
+  if (campo) {
+    campo.addEventListener("input", function () {
+      estado.q = campo.value.trim();
+      if (estado.q && estado.diaAuto) { estado.dia = "todos"; estado.diaAuto = false; }
+      mostrarTodos = false;
+      buscar();
+    });
+    $$(".chip[data-busca]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        estado[b.dataset.busca] = b.dataset.valor;
+        if (b.dataset.busca === "dia") estado.diaAuto = false;
+        mostrarTodos = false;
+        buscar();
+      });
+    });
+    $$("[data-sugestao]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        campo.value = b.dataset.sugestao;
+        campo.dispatchEvent(new Event("input"));
+      });
+    });
+    limpar.addEventListener("click", function () {
+      campo.value = "";
+      campo.dispatchEvent(new Event("input"));
+      campo.focus();
+    });
+    buscar();
+  }
 
   // ---------- Conversor de moedas ----------
   var brl = $("#conv-brl"), uyu = $("#conv-uyu"), ars = $("#conv-ars");
@@ -246,15 +406,24 @@
       particulas = [];
     };
     window.addEventListener("resize", medir);
-    if (semMovimento || !("IntersectionObserver" in window)) {
+    if (!("IntersectionObserver" in window)) {
       estatico();
     } else {
-      medir();
       new IntersectionObserver(function (en) {
         var visivel = en[0].isIntersecting;
+        if (visivel) medir();
+        if (visivel && semMovimento) { estatico(); return; }
         if (visivel && !rodando) { rodando = true; requestAnimationFrame(quadro); }
         if (!visivel) rodando = false;
       }).observe(tela);
     }
   }
+
+  // Mostra a página do endereço atual depois que tudo está pronto.
+  rota();
+  // Ao abrir um link direto para um trecho (ex.: #mvd-b), rola de novo quando as fotos terminam de carregar.
+  window.addEventListener("load", function () {
+    var el = location.hash.length > 1 ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+    if (el && !el.classList.contains("pagina") && !el.classList.contains("dia")) el.scrollIntoView({ block: "start" });
+  });
 })();

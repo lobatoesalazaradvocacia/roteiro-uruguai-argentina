@@ -7,8 +7,10 @@ Uso:
     python3 gerar_site.py --abrir      gera e abre no navegador
     python3 gerar_site.py --servir     gera e publica na rede Wi-Fi local (celulares na mesma rede)
 
-As fotos ficam em docs/fotos (baixadas com baixar_fotos.py). Se alguma faltar,
-o dia usa a ilustração de cenas.py no lugar. Só usa a biblioteca padrão do Python 3.
+O site é uma página só, dividida em "páginas" (Início, Roteiro, Buscar, cidades...)
+que o menu lateral troca sem recarregar. As fotos ficam em docs/fotos (baixadas com
+baixar_fotos.py); se alguma faltar, o dia usa a ilustração de cenas.py no lugar.
+Só usa a biblioteca padrão do Python 3.
 """
 import argparse
 import datetime as dt
@@ -18,6 +20,7 @@ import http.server
 import json
 import re
 import socket
+import unicodedata
 import webbrowser
 from pathlib import Path
 from urllib.parse import quote_plus
@@ -41,14 +44,27 @@ TIPOS = {
     "rua": "Passeio", "cultura": "Museu e cultura", "comida": "Refeição", "cafe": "Café", "doce": "Sorvete",
     "mov": "Deslocamento", "feira": "Feira e compras", "festa": "Noite", "pausa": "Descanso",
 }
-MENU = [
-    ("roteiro", "Roteiro"), ("montevideu", "Montevidéu"), ("buenos-aires", "Buenos Aires"), ("comer", "Onde comer"),
-    ("compras", "Compras"), ("travessia", "Travessia e Réveillon"), ("antes", "Antes de ir"),
-    ("seguranca", "Segurança"), ("pendencias", "Checklist"), ("fontes", "Fontes"),
-]
 COR_CATEGORIA = {"carnes": "vermelho", "restaurantes": "roxo", "cafes": "cafe", "pizzas": "laranja", "sorvetes": "rosa"}
 ICONE_CATEGORIA = {"carnes": "comida", "restaurantes": "comida", "cafes": "cafe", "pizzas": "comida", "sorvetes": "doce"}
+TIPO_CATEGORIA = {"carnes": "comida", "restaurantes": "comida", "cafes": "cafe", "pizzas": "comida", "sorvetes": "doce"}
 CORES_NOTAS = ["sol", "rosa", "celeste", "verde", "laranja", "roxo"]
+CIDADE_NOME = {"mvd": "Montevidéu", "ba": "Buenos Aires"}
+
+# id, nome no menu, ícone, cor, foto do cartão na página inicial, subtítulo do cartão
+PAGINAS = [
+    ("inicio", "Início", "casa", "sol", None, ""),
+    ("roteiro", "Roteiro dia a dia", "calendario", "laranja", "letras", "Um dia de cada vez"),
+    ("buscar", "Buscar o que fazer", "lupa", "rosa", None, "Por dia, cidade ou tipo"),
+    ("montevideu", "Montevidéu", "cidade", "azul", "rambla", "Cultura e passeios de A a E"),
+    ("buenos-aires", "Buenos Aires", "cidade", "celeste", "obelisco", "Tango, filete e passeios de A a G"),
+    ("comer", "Onde comer", "comida", "vermelho", "asado", "Parrillas, cafés e sorveterias"),
+    ("travessia", "Travessia e Réveillon", "navio", "roxo", "puente-mujer", "Ferry e a noite de Ano-Novo"),
+    ("compras", "Compras", "feira", "laranja", "filete", "Couro, mate, alfajor e tax free"),
+    ("antes", "Antes de ir", "documento", "verde", "mate", "Documentos, dinheiro e conversor"),
+    ("seguranca", "Segurança", "escudo", "celeste", "san-telmo", "Acessibilidade e cuidados"),
+    ("pendencias", "Checklist", "check", "verde", None, "Reservas que não podem esperar"),
+    ("fontes", "Fontes e créditos", "livro", "roxo", None, "Pesquisa e fotos"),
+]
 
 NC = re.compile(r"\bn/c\b")
 DATA_CURTA = re.compile(r"\b(\d{2})/(\d{2})\b")
@@ -64,6 +80,11 @@ def e(texto):
 def rico(texto):
     """Escapa o texto e transforma "n/c" num selo de "não confirmado"."""
     return NC.sub('<abbr class="nc" title="não confirmado">n/c</abbr>', e(texto))
+
+
+def slug(texto):
+    t = unicodedata.normalize("NFD", texto).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "-", t).strip("-")[:40]
 
 
 def foto(chave):
@@ -117,13 +138,27 @@ DIA_POR_ID = {d["id"]: d for d in dados.DIAS}
 ID_POR_DATA = {ddmm(d["data"]): d["id"] for d in dados.DIAS}
 
 
+def dias_no_texto(texto):
+    """Ids dos dias citados num texto ("Qua 30/12 e Qui 31/12" -> ["d30", "d31"])."""
+    ids = []
+    for m in DATA_CURTA.finditer(texto or ""):
+        i = ID_POR_DATA.get(m.group(0))
+        if i and i not in ids:
+            ids.append(i)
+    return ids
+
+
+def rotulo_dia(i):
+    d = DIA_POR_ID[i]
+    return f'{d["semana"]} {ddmm(d["data"])}'
+
+
 def link_dia(texto):
     """Liga um texto como "Qua 30/12 (opção)" ao cartão daquele dia."""
-    m = DATA_CURTA.search(texto)
-    alvo = ID_POR_DATA.get(m.group(0)) if m else None
+    ids = dias_no_texto(texto)
     conteudo = f"No roteiro: {e(texto)}"
-    if alvo:
-        return f'<a class="no-roteiro" href="#{alvo}">{conteudo}</a>'
+    if ids:
+        return f'<a class="no-roteiro" href="#{ids[0]}">{conteudo}</a>'
     return f'<span class="no-roteiro">{conteudo}</span>'
 
 
@@ -132,21 +167,50 @@ def titulo_secao(script, titulo_html, texto=""):
     return f'<div class="titulo-secao"><span class="script">{e(script)}</span><h2>{titulo_html}</h2>{p}</div>'
 
 
-def faixa(id_, fundo, conteudo, proxima, extra=""):
-    return (f'<section class="faixa faixa--{fundo}" id="{id_}"{extra}>{conteudo}'
-            f'{cenas.onda(proxima)}</section>')
+def faixa(fundo, conteudo, proxima="var(--sol)", id_=None):
+    ident = f' id="{id_}"' if id_ else ""
+    return f'<div class="faixa faixa--{fundo}"{ident}>{conteudo}{cenas.onda(proxima)}</div>'
+
+
+def pagina(id_, conteudo):
+    nome = next(p[1] for p in PAGINAS if p[0] == id_)
+    return f'<section class="pagina" id="{id_}" data-titulo="{e(nome)}">{conteudo}</section>'
 
 
 # ---------------------------------------------------------------------------
-# Topo e abertura
+# Topo e menu lateral
 # ---------------------------------------------------------------------------
 def topo():
-    itens = "".join(f'<a href="#{i}">{e(r)}</a>' for i, r in MENU)
     return (f'<header class="topo"><div class="topo-in">'
-            f'<a class="marca" href="#inicio">{cenas.sol_svg()}<span>Uruguai &amp; Argentina</span></a>'
-            f'<nav class="menu" aria-label="Seções">{itens}</nav></div></header>')
+            f'<a class="marca" href="#inicio" aria-label="Início">{cenas.sol_svg()}<span class="marca-txt">Uruguai &amp; Argentina</span></a>'
+            f'<span class="pagina-atual" id="pagina-atual" aria-live="polite"></span>'
+            f'<a class="btn-topo btn-busca" href="#buscar">{cenas.icone("lupa")}<span>Buscar</span></a>'
+            f'<button class="btn-topo btn-menu" id="btn-menu" type="button" aria-controls="gaveta" aria-expanded="false" '
+            f'aria-label="Abrir menu">{cenas.icone("pontos")}</button>'
+            f'</div></header>')
 
 
+def gaveta():
+    itens = "".join(
+        f'<li><a class="cor-{cor}" href="#{i}" data-pagina="{i}"><span class="ico-circ">{cenas.icone(ico)}</span>{e(nome)}</a></li>'
+        for i, nome, ico, cor, _, _ in PAGINAS)
+    dias = "".join(
+        f'<a class="gaveta-dia cor-{d["cor"]}" href="#{d["id"]}" data-data="{d["data"]}">'
+        f'<small>{e(d["semana"])}</small><b>{d["data"][8:10]}</b></a>'
+        for d in dados.DIAS)
+    return (f'<div class="gaveta-fundo" id="gaveta-fundo" hidden></div>'
+            f'<nav class="gaveta" id="gaveta" aria-label="Menu do site" hidden>'
+            f'<div class="gaveta-cab">{cenas.sol_svg()}<b>Uruguai &amp; Argentina</b>'
+            f'<button class="btn-fechar" id="btn-fechar" type="button" aria-label="Fechar menu">{cenas.icone("fechar")}</button></div>'
+            f'<a class="gaveta-busca" href="#buscar">{cenas.icone("lupa")}<span>O que dá pra fazer hoje?</span></a>'
+            f'<p class="gaveta-grupo">Dia a dia</p><div class="gaveta-dias">{dias}</div>'
+            f'<p class="gaveta-grupo">Páginas</p><ul class="gaveta-lista">{itens}</ul>'
+            f'<p class="gaveta-tchau">¡Buen viaje!</p></nav>')
+
+
+# ---------------------------------------------------------------------------
+# Início
+# ---------------------------------------------------------------------------
 def palavra_foto(texto, chave, cor, pais):
     src = foto(chave)
     if src:
@@ -154,7 +218,7 @@ def palavra_foto(texto, chave, cor, pais):
     return f'<span style="color:var(--{cor})">{e(texto)}</span>'
 
 
-def abertura(hoje):
+def inicio(hoje):
     v = dados.VIAGEM
     faltam = (dt.date.fromisoformat(v["inicio"]) - hoje).days
     num = str(faltam) if faltam > 0 else "Hoje"
@@ -162,8 +226,8 @@ def abertura(hoje):
     polaroides = "".join(
         f'<figure class="polaroide">{img(ch, legenda, lazy=False)}<figcaption>{e(legenda)}</figcaption></figure>'
         for ch, legenda in dados.POLAROIDES if foto(ch))
-    return f"""
-<section class="ceu" id="inicio">
+    ceu = f"""
+<div class="ceu">
   <div class="bandeirinhas" aria-hidden="true"></div>
   {cenas.sol_svg("sol-ceu")}
   <div class="wrap ceu-in">
@@ -184,7 +248,27 @@ def abertura(hoje):
     <div class="polaroides">{polaroides}</div>
   </div>
   {cenas.onda("var(--papel)")}
-</section>"""
+</div>"""
+    dias = "".join(
+        f'<a class="dia-tile cor-{d["cor"]}" href="#{d["id"]}" data-data="{d["data"]}">'
+        f'{img(d["foto"], d["legenda"])}'
+        f'<span class="dia-tile-data"><b>{d["data"][8:10]}</b>{MESES[d["data"][5:7]]}</span>'
+        f'<span class="dia-tile-txt"><small>{e(SEMANA[d["semana"]])} · {e({"mvd": "Montevidéu", "ba": "Buenos Aires", "rio": "Travessia"}[d["cidade"]])}</small>'
+        f'<strong>{e(d["titulo"])}</strong></span></a>'
+        for d in dados.DIAS)
+    tiles = "".join(
+        f'<a class="tile cor-{cor}{" tile--foto" if foto(ft) else ""}" href="#{i}">{img(ft, nome)}'
+        f'<span class="tile-ico">{cenas.icone(ico)}</span><strong>{e(nome)}</strong><small>{e(sub)}</small></a>'
+        for i, nome, ico, cor, ft, sub in PAGINAS if i != "inicio")
+    painel = f"""
+<div class="wrap">
+  {titulo_secao("Dia a dia", "Escolham o dia")}
+  <div class="dia-tiles">{dias}</div>
+  <div class="espaco"></div>
+  {titulo_secao("Tudo organizado", "O que vocês querem ver?")}
+  <div class="tiles">{tiles}</div>
+</div>"""
+    return pagina("inicio", ceu + faixa("papel", painel))
 
 
 # ---------------------------------------------------------------------------
@@ -216,6 +300,17 @@ def cartao_dia(d, n):
         t, texto = d["aviso"]
         aviso = f'<div class="aviso"><b>{e(t)}</b>{rico(texto)}</div>'
     paradas = "".join(parada(p) for p in d["paradas"])
+    anterior = dados.DIAS[n - 2] if n > 1 else None
+    proximo = dados.DIAS[n] if n < len(dados.DIAS) else None
+    nav = '<nav class="dia-nav" aria-label="Outros dias">'
+    nav += (f'<a class="cor-{anterior["cor"]}" href="#{anterior["id"]}">{cenas.icone("esq")}'
+            f'<span><small>Dia anterior</small>{e(rotulo_dia(anterior["id"]))} · {e(anterior["titulo"])}</span></a>'
+            if anterior else "<span></span>")
+    nav += (f'<a class="cor-{proximo["cor"]} prox" href="#{proximo["id"]}">'
+            f'<span><small>Próximo dia</small>{e(rotulo_dia(proximo["id"]))} · {e(proximo["titulo"])}</span>{cenas.icone("dir")}</a>'
+            if proximo else '<a class="cor-sol prox" href="#pendencias"><span><small>Fim da viagem</small>Ver o checklist</span>'
+                            f'{cenas.icone("dir")}</a>')
+    nav += "</nav>"
     return f"""
 <article class="dia cor-{d["cor"]}" id="{d["id"]}" data-data="{d["data"]}" data-titulo="{e(rotulo)}">
   <figure class="dia-foto">
@@ -231,6 +326,7 @@ def cartao_dia(d, n):
     {nota}
     <ol class="paradas">{paradas}</ol>
     {aviso}
+    {nav}
   </div>
 </article>"""
 
@@ -248,18 +344,20 @@ def roteiro():
     dias = "".join(cartao_dia(d, i + 1) for i, d in enumerate(dados.DIAS))
     conteudo = f"""
 <div class="wrap">
-  {titulo_secao("Dia a dia", "Oito dias de alegria",
-                "Cada período tem de três a cinco pontos, todos a pé dentro do mesmo bloco. Sorvete, café e lanche entram como paradas no caminho.")}
-  <ul class="notas-ordem" aria-label="Por que os passeios estão nesta ordem">{notas}</ul>
-  <div class="premissas">
-    <h3>Premissas do roteiro</h3>
-    <ul>{premissas}</ul>
-    <p><abbr class="nc" title="não confirmado">n/c</abbr> = não confirmado. {rico(dados.NOTA_ESTIMATIVAS)}</p>
-  </div>
+  {titulo_secao("Dia a dia", "Oito dias de alegria", "Toquem num dia para ver a programação completa, com horários, mapas e fotos.")}
   <nav class="dias-nav" aria-label="Dias da viagem">{chips}</nav>
   <div class="dias">{dias}</div>
+  <details class="sobre">
+    <summary>Por que o roteiro está nesta ordem {cenas.icone("dir", "ico seta-abrir")}</summary>
+    <ul class="notas-ordem">{notas}</ul>
+    <div class="premissas">
+      <h3>Premissas do roteiro</h3>
+      <ul>{premissas}</ul>
+      <p><abbr class="nc" title="não confirmado">n/c</abbr> = não confirmado. {rico(dados.NOTA_ESTIMATIVAS)}</p>
+    </div>
+  </details>
 </div>"""
-    return faixa("roteiro", "papel", conteudo, "var(--azul)")
+    return pagina("roteiro", faixa("papel", conteudo))
 
 
 # ---------------------------------------------------------------------------
@@ -278,20 +376,26 @@ def ficha(p, cidade_mapa):
             f'<div class="links">{links}</div></div>')
 
 
+def cabecalho_bloco(letra, nome, sub, dias_html, contagem):
+    return (f'<summary class="bloco-cab"><span class="letra" aria-hidden="true">{e(letra)}</span><div>'
+            f'<h3><span class="visually-hidden">Bloco {e(letra)}: </span>{e(nome)}</h3>'
+            f'<p class="bloco-sub">{rico(sub)}</p><div class="bloco-dias">{dias_html}'
+            f'<span class="bloco-qtd">{contagem}</span></div></div>'
+            f'<span class="abrir" aria-hidden="true">{cenas.icone("dir")}</span></summary>')
+
+
 def bloco(chave, b, cidade_mapa):
-    dias = "".join(
-        f'<a class="cor-{DIA_POR_ID[i]["cor"]}" href="#{i}">{e(DIA_POR_ID[i]["semana"])} {ddmm(DIA_POR_ID[i]["data"])}</a>'
-        for i in b["dias"])
+    dias = "".join(f'<a class="cor-{DIA_POR_ID[i]["cor"]}" href="#{i}">{e(rotulo_dia(i))}</a>' for i in b["dias"])
     fichas = "".join(ficha(p, cidade_mapa) for p in b["pontos"])
-    return (f'<article class="bloco" id="{chave}-{b["letra"].lower()}"><div class="bloco-cab">'
-            f'<span class="letra" aria-hidden="true">{b["letra"]}</span><div>'
-            f'<h3><span class="visually-hidden">Bloco {b["letra"]}: </span>{e(b["nome"])}</h3>'
-            f'<p class="bloco-sub">{rico(b["sub"])}</p><div class="bloco-dias">{dias}</div></div></div>'
-            f'<div class="fichas">{fichas}</div></article>')
+    n = len(b["pontos"])
+    qtd = "1 lugar" if n == 1 else f"{n} lugares"
+    return (f'<details class="bloco" id="{chave}-{b["letra"].lower()}">'
+            f'{cabecalho_bloco(b["letra"], b["nome"], b["sub"], dias, qtd)}'
+            f'<div class="fichas">{fichas}</div></details>')
 
 
 def cartao_cultura(c):
-    return (f'<figure class="cult cor-{c["cor"]}">{img(c["foto"], c["titulo"])}<figcaption>'
+    return (f'<figure class="cult cor-{c["cor"]}" id="cult-{slug(c["titulo"])}">{img(c["foto"], c["titulo"])}<figcaption>'
             f'<span class="tag">{e(c["tag"])}</span><h4>{e(c["titulo"])}</h4><p>{rico(c["texto"])}</p>'
             f'{credito(c["foto"])}</figcaption></figure>')
 
@@ -322,13 +426,13 @@ def cidade(chave, ancora):
         for x in c["extras"]:
             zap = whatsapp(x["whatsapp"]) if x.get("whatsapp") else ""
             itens.append(
-                f'<div class="extra"><span class="quando">{e(x["quando"])}</span><h4>{e(x["nome"])}</h4>'
+                f'<div class="extra" id="extra-{slug(x["nome"])}"><span class="quando">{e(x["quando"])}</span><h4>{e(x["nome"])}</h4>'
                 f'<p class="end">{e(x["onde"])}</p><p>{rico(x["info"])}</p>'
                 f'<div class="links">{link_mapa(x["onde"] + ", " + c["cidade_mapa"])}{link_site(x["link"], "Página")}{zap}</div></div>')
-        blocos += (f'<article class="bloco" id="{chave}-extras"><div class="bloco-cab">'
-                   f'<span class="letra" aria-hidden="true">+</span><div><h3>Extras dos vídeos</h3>'
-                   f'<p class="bloco-sub">Cinco lugares dos vídeos entraram no roteiro, alguns como opção.</p></div></div>'
-                   f'<div class="extras-lista">{"".join(itens)}</div></article>')
+        n = len(c["extras"])
+        blocos += (f'<details class="bloco" id="{chave}-extras">'
+                   f'{cabecalho_bloco("+", "Extras dos vídeos", "Lugares dos vídeos que entraram no roteiro, alguns como opção.", "", f"{n} lugares")}'
+                   f'<div class="extras-lista">{"".join(itens)}</div></details>')
     conteudo = f"""
 <div class="wrap">
   <div class="banner">
@@ -344,16 +448,16 @@ def cidade(chave, ancora):
   <div class="sub-titulo"><h3>{titulo_cultura[0]}</h3><span class="script">{titulo_cultura[1]}</span></div>
   <div class="cultura">{cultura}</div>
   {extra_ba}
-  <div class="sub-titulo"><h3>Os blocos de passeio</h3><span class="script">tudo a pé, de A a {c["blocos"][-1]["letra"]}</span></div>
+  <div class="sub-titulo"><h3>Os blocos de passeio</h3><span class="script">toquem para abrir</span></div>
   <div class="blocos">{blocos}</div>
   <p class="fora">{rico(c["fora"])}</p>
 </div>"""
-    fundo, proxima = ("azul", "var(--filete-bg)") if chave == "mvd" else ("filete", "var(--amarelo-claro)")
-    return faixa(ancora, fundo, conteudo, proxima, ' data-cidade="%s"' % chave)
+    fundo = "azul" if chave == "mvd" else "filete"
+    return pagina(ancora, faixa(fundo, conteudo))
 
 
 # ---------------------------------------------------------------------------
-# Onde comer, compras, travessia, réveillon
+# Onde comer, compras, travessia e réveillon
 # ---------------------------------------------------------------------------
 def restaurante(r):
     cid = dados.CIDADES[r["cidade"]]
@@ -367,27 +471,28 @@ def restaurante(r):
     if r["whatsapp"]:
         links += whatsapp(r["whatsapp"])
     dia = link_dia(r["dia"]) if r["dia"] else ""
-    return (f'<article class="rest cor-{COR_CATEGORIA[r["cat"]]}" data-cidade="{r["cidade"]}" data-cat="{r["cat"]}">'
+    return (f'<article class="rest cor-{COR_CATEGORIA[r["cat"]]}" id="r-{slug(r["nome"])}" '
+            f'data-cidade="{r["cidade"]}" data-cat="{r["cat"]}">'
             f'<div class="rest-faixa"><span>{cenas.icone(ICONE_CATEGORIA[r["cat"]])}{e(cat)}</span>'
             f'<span class="pais">{e(cid["nome"])}</span></div>'
             f'<h3>{e(r["nome"])}</h3><p class="onde">{rico(r["onde"])}</p>'
             f'{f"<dl>{dl}</dl>" if dl else ""}{dia}<div class="links">{links}</div></article>')
 
 
+def chips(grupo, itens, attr="data-filtro"):
+    return "".join(
+        f'<button class="chip {cls}" type="button" {attr}="{grupo}" data-valor="{v}" '
+        f'aria-pressed="{"true" if i == 0 else "false"}">{e(r)}</button>' for i, (v, r, cls) in enumerate(itens))
+
+
 def comer():
     cidades = [("todas", "Todas", ""), ("mvd", "Montevidéu", "cor-azul"), ("ba", "Buenos Aires", "cor-celeste")]
     cats = [("todas", "Todos", "")] + [(k, r, f"cor-{COR_CATEGORIA[k]}") for k, r in dados.CATEGORIAS]
-
-    def chips(nome, itens):
-        return "".join(
-            f'<button class="chip {cls}" type="button" data-filtro="{nome}" data-valor="{v}" '
-            f'aria-pressed="{"true" if v == "todas" else "false"}">{e(r)}</button>' for v, r, cls in itens)
-
     cards = "".join(restaurante(r) for r in dados.RESTAURANTES)
     dicas = "".join(f"<li>{rico(t)}</li>" for _, t in dados.DICAS_COMIDA)
     conteudo = f"""
 <div class="wrap">
-  {titulo_secao("Parrillas, cafés e sorvetes", "Onde <em>comer</em> (e muito!)",
+  {titulo_secao("Parrillas, cafés e sorvetes", "Onde comer (e muito!)",
                 "Em Buenos Aires as melhores carnes exigem reserva com semanas de antecedência; em Montevidéu o melhor custo-benefício está no Mercado del Puerto e nas parrillas de Punta Carretas. Notas do TripAdvisor (TA) na data da pesquisa.")}
   <div class="filtros">
     <div class="filtro-linha" role="group" aria-label="Filtrar por cidade"><span>Cidade</span>{chips("cidade", cidades)}</div>
@@ -399,7 +504,7 @@ def comer():
   <ul class="dicas">{dicas}</ul>
   <p class="reservem" data-so-antes><b>Reservem já!</b> Faltam <strong data-faltam>…</strong> dias: Don Julio, Fogón Asado e La Carnicería lotam com semanas de antecedência.</p>
 </div>"""
-    return faixa("comer", "amarelo", conteudo.replace("<em>", "").replace("</em>", ""), "var(--rosa-claro)")
+    return pagina("comer", faixa("amarelo", conteudo))
 
 
 def lista_compras(itens, cor):
@@ -422,7 +527,7 @@ def compras():
   </div>
   <div class="notas">{notas}</div>
 </div>"""
-    return faixa("compras", "rosa", conteudo, "var(--celeste-claro)")
+    return pagina("compras", faixa("rosa", conteudo))
 
 
 def travessia():
@@ -435,7 +540,7 @@ def travessia():
             f'<div><small>Duração</small><b>{e(o["duracao"])}</b></div><div><small>Por pessoa</small><b>{e(o["preco"])}</b></div></div>'
             f'<p>{rico(o["texto"])}</p><div class="links">{link_site(o["link"])}</div></div>')
     notas = "".join(f"<li>{rico(n)}</li>" for n in dados.TRAVESSIA_NOTAS)
-    conteudo = f"""
+    ferry = f"""
 <div class="wrap">
   <div class="travessia-topo">
     {titulo_secao("Terça, 29 de dezembro", "Cruzando o Rio da Prata", dados.TRAVESSIA_INTRO)}
@@ -443,25 +548,22 @@ def travessia():
   </div>
   <div class="opcoes">{"".join(opcoes)}</div>
   <ul class="lista-simples">{notas}</ul>
+  <p class="pular"><a class="lk" href="#reveillon">Ir para o Réveillon {cenas.icone("dir")}</a></p>
 </div>"""
-    return faixa("travessia", "celeste", conteudo, "var(--noite)")
-
-
-def reveillon():
-    opcoes = "".join(
+    rev_opcoes = "".join(
         f'<div class="opcao"><h4><span class="letra-op">{r["letra"]}.</span> {e(r["nome"])}</h4><p>{rico(r["lugar"])}</p>'
         f'<div class="numeros"><div><small>Por pessoa (2025)</small><b>{e(r["preco"])}</b></div></div>'
         f'<p class="det">{rico(r["obs"])}</p></div>'
         for r in dados.REVEILLON)
-    notas = "".join(f'<div class="nota"><h4>{e(t)}</h4><p>{rico(x)}</p></div>' for t, x in dados.REVEILLON_NOTAS)
-    conteudo = f"""
+    rev_notas = "".join(f'<div class="nota"><h4>{e(t)}</h4><p>{rico(x)}</p></div>' for t, x in dados.REVEILLON_NOTAS)
+    noite = f"""
 <canvas id="fogos" aria-hidden="true"></canvas>
 <div class="wrap">
   {titulo_secao("¡Feliz Año Nuevo!", "Réveillon em Buenos Aires", dados.REVEILLON_INTRO)}
-  <div class="opcoes">{opcoes}</div>
-  <div class="notas">{notas}</div>
+  <div class="opcoes">{rev_opcoes}</div>
+  <div class="notas">{rev_notas}</div>
 </div>"""
-    return faixa("reveillon", "noite", conteudo, "var(--papel)", ' data-menu="travessia"')
+    return pagina("travessia", faixa("celeste", ferry, "var(--noite)") + faixa("noite", noite, id_="reveillon"))
 
 
 # ---------------------------------------------------------------------------
@@ -476,7 +578,6 @@ def antes():
     conteudo = f"""
 <div class="wrap">
   {titulo_secao("Documentos, dinheiro e transporte", "Antes de embarcar", dados.ANTES_INTRO)}
-  <div class="antes">{itens}</div>
   <div class="conversor" id="conversor">
     <h3>Conversor de bolso</h3>
     <p>Digitem em qualquer campo. Cotações de referência de 29/09/2026; ajustem antes de usar.</p>
@@ -490,8 +591,9 @@ def antes():
       <label for="taxa-ars">R$ 1 = ARS <input id="taxa-ars" type="text" inputmode="decimal" autocomplete="off" value="{c["ars_por_brl"]}"></label>
     </div>
   </div>
+  <div class="antes">{itens}</div>
 </div>"""
-    return faixa("antes", "papel", conteudo, "var(--verde-claro)")
+    return pagina("antes", faixa("papel", conteudo))
 
 
 def seguranca():
@@ -504,7 +606,7 @@ def seguranca():
     <div class="cartao"><div class="cartao-tit"><h3>Segurança prática</h3></div><dl class="pares">{pares(dados.SEGURANCA)}</dl></div>
   </div>
 </div>"""
-    return faixa("seguranca", "verde", conteudo, "var(--papel)")
+    return pagina("seguranca", faixa("verde", conteudo))
 
 
 def pendencias():
@@ -529,7 +631,7 @@ def pendencias():
   </div>
   <div class="notas">{atencao}</div>
 </div>"""
-    return faixa("pendencias", "papel", conteudo, "var(--lavanda)")
+    return pagina("pendencias", faixa("papel", conteudo))
 
 
 def fontes():
@@ -544,23 +646,121 @@ def fontes():
                       if creditos else "")
     conteudo = f"""
 <div class="wrap">
-  {titulo_secao("Pesquisa de 29/09/2026", "Fontes",
+  {titulo_secao("Pesquisa de 29/09/2026", "Fontes e créditos",
                 "Onde o site oficial bloqueava leitura, foram usadas fontes secundárias e a informação ficou marcada como n/c.")}
   <div class="fontes">{grupos}</div>
   {bloco_creditos}
 </div>"""
-    return faixa("fontes", "lavanda", conteudo, "var(--sol)")
+    return pagina("fontes", faixa("lavanda", conteudo))
 
 
+# ---------------------------------------------------------------------------
+# Buscar
+# ---------------------------------------------------------------------------
+def tipo_ponto(nome):
+    n = nome.lower()
+    if "café" in n:
+        return "cafe"
+    if "mercado del puerto" in n or "mercado agrícola" in n:
+        return "comida"
+    if any(w in n for w in ("feria", "shopping", "mercado de san telmo", "ateneo", "peatonal", "palermo soho")):
+        return "feira"
+    if any(w in n for w in ("museo", "teatro", "palacio", "cabildo", "catedral", "centro cultural", "malba", "congreso",
+                            "manzana", "mirador", "fragata", "floralis", "cementerio", "legislativo", "mnav")):
+        return "cultura"
+    return "rua"
+
+
+def indice_busca():
+    itens = []
+    for d in dados.DIAS:
+        for i, p in enumerate(d["paradas"]):
+            cid = d["cidade"] if d["cidade"] != "rio" else ("mvd" if i == 0 else "ba")
+            mapas = p.get("mapas") or []
+            itens.append({"k": "parada", "t": p["tipo"], "c": cid, "d": [d["id"]],
+                          "titulo": p["titulo"], "texto": p["texto"],
+                          "meta": f'{rotulo_dia(d["id"])} · {p["hora"]}', "link": "#" + d["id"],
+                          "rotulo": "Ver no roteiro", "mapa": url_mapa(mapas[0][1]) if mapas else "",
+                          "foto": foto(p.get("foto")) or "", "cor": d["cor"]})
+    for chave in ("mvd", "ba"):
+        c = dados.CIDADES[chave]
+        for b in c["blocos"]:
+            for p in b["pontos"]:
+                busca = p["mapa"] or ", ".join(x for x in (p["nome"], p["endereco"], c["cidade_mapa"]) if x)
+                itens.append({"k": "ponto", "t": tipo_ponto(p["nome"]), "c": chave, "d": b["dias"],
+                              "titulo": p["nome"],
+                              "texto": f'Horário: {p["horario"]}. Entrada: {p["entrada"]}. {p["obs"]}',
+                              "meta": f'Bloco {b["letra"]} · {b["nome"]}', "link": f'#{chave}-{b["letra"].lower()}',
+                              "rotulo": f'Ver bloco {b["letra"]}', "mapa": url_mapa(busca)})
+        for x in c.get("extras", []):
+            itens.append({"k": "extra", "t": "festa" if "Salón" in x["nome"] or "Barolo" in x["nome"] else "rua",
+                          "c": chave, "d": dias_no_texto(x["quando"]), "titulo": x["nome"], "texto": x["info"],
+                          "meta": x["quando"], "link": f'#extra-{slug(x["nome"])}', "rotulo": "Ver detalhes",
+                          "mapa": url_mapa(x["onde"] + ", " + c["cidade_mapa"])})
+        for x in dados.CULTURA[chave]:
+            itens.append({"k": "cultura", "t": "cultura", "c": chave, "d": dias_no_texto(x["texto"]),
+                          "titulo": x["titulo"], "texto": x["texto"], "meta": x["tag"],
+                          "link": f'#cult-{slug(x["titulo"])}', "rotulo": "Ver cultura", "foto": foto(x["foto"]) or ""})
+    for r in dados.RESTAURANTES:
+        cid = dados.CIDADES[r["cidade"]]
+        texto = ". ".join(x for x in (r["destaque"], r["preco"], r["nota"], r["reserva"]) if x)
+        itens.append({"k": "rest", "t": TIPO_CATEGORIA[r["cat"]], "c": r["cidade"], "d": dias_no_texto(r["dia"]),
+                      "titulo": r["nome"], "texto": texto, "meta": f'{dict(dados.CATEGORIAS)[r["cat"]]} · {r["onde"]}',
+                      "link": f'#r-{slug(r["nome"])}', "rotulo": "Ver em Onde comer",
+                      "mapa": url_mapa(r["mapa"] or f'{r["nome"]}, {r["onde"]}, {cid["cidade_mapa"]}')})
+    for chave in ("ba", "mvd"):
+        for cat, melhor, onde, obs in dados.COMPRAS[chave]:
+            itens.append({"k": "compra", "t": "feira", "c": chave, "d": dias_no_texto(onde + " " + obs),
+                          "titulo": f"{cat}: {melhor}", "texto": f"{onde}. {obs}", "meta": "Compras",
+                          "link": "#compras", "rotulo": "Ver compras"})
+    for n, it in enumerate(itens):
+        it["o"] = n
+    return itens
+
+
+def buscar():
+    dias = [("todos", "Todos os dias", "")] + [(d["id"], rotulo_dia(d["id"]), f'cor-{d["cor"]}') for d in dados.DIAS]
+    cidades = [("todas", "Todas", ""), ("mvd", "Montevidéu", "cor-azul"), ("ba", "Buenos Aires", "cor-celeste")]
+    tipos = [("tudo", "Tudo", ""), ("rua", "Passeios", "cor-verde"), ("cultura", "Museus e cultura", "cor-roxo"),
+             ("comida", "Refeições", "cor-vermelho"), ("cafe", "Cafés", "cor-cafe"), ("doce", "Sorvetes", "cor-rosa"),
+             ("feira", "Compras e feiras", "cor-laranja"), ("festa", "Noite", "cor-sol"), ("mov", "Deslocamentos", "cor-azul")]
+    sugestoes = ["sorvete", "museu", "parrilla", "café", "tango", "grátis", "reservar", "pôr do sol", "doce de leite", "Réveillon"]
+    sug = "".join(f'<button class="sugestao" type="button" data-sugestao="{e(s)}">{e(s)}</button>' for s in sugestoes)
+    dados_js = {"itens": indice_busca(), "icones": cenas.ICONES, "tipos": TIPOS, "cidades": CIDADE_NOME,
+                "dias": {d["id"]: rotulo_dia(d["id"]) for d in dados.DIAS}}
+    json_seguro = json.dumps(dados_js, ensure_ascii=False).replace("</", "<\\/")
+    conteudo = f"""
+<div class="wrap">
+  {titulo_secao("O que dá pra fazer?", "Buscar na viagem",
+                "Escolham um dia para ver a programação, filtrem por cidade e tipo, ou digitem o que procuram: passeios, museus, restaurantes, sorvetes e compras aparecem juntos.")}
+  <div class="busca-caixa">
+    {cenas.icone("lupa")}
+    <label class="visually-hidden" for="busca-q">O que vocês procuram?</label>
+    <input id="busca-q" type="search" placeholder="Ex.: sorvete, museu, tango, grátis…" autocomplete="off" enterkeyhint="search">
+    <button class="limpar" id="busca-limpar" type="button" aria-label="Limpar busca" hidden>{cenas.icone("fechar")}</button>
+  </div>
+  <div class="sugestoes"><span>Ideias:</span>{sug}</div>
+  <div class="filtros filtros--busca">
+    <div class="filtro-linha" role="group" aria-label="Dia"><span>Dia</span>{chips("dia", dias, "data-busca")}</div>
+    <div class="filtro-linha" role="group" aria-label="Cidade"><span>Cidade</span>{chips("cidade", cidades, "data-busca")}</div>
+    <div class="filtro-linha" role="group" aria-label="Tipo"><span>Tipo</span>{chips("tipo", tipos, "data-busca")}</div>
+  </div>
+  <p class="contador" id="busca-contador" aria-live="polite"></p>
+  <div class="resultados" id="resultados"><p class="vazio">Escolham um dia ou digitem o que procuram.</p></div>
+  <script type="application/json" id="indice">{json_seguro}</script>
+</div>"""
+    return pagina("buscar", faixa("rosa", conteudo))
+
+
+# ---------------------------------------------------------------------------
+# Rodapé e montagem
+# ---------------------------------------------------------------------------
 def rodape(hoje):
     return (f'<footer class="rodape"><div class="bandeirinhas" aria-hidden="true"></div>{cenas.sol_svg()}'
             f'<p class="tchau">¡Buen viaje!</p>'
             f'<p>Gerado em {hoje.strftime("%d/%m/%Y")} por gerar_site.py a partir de dados.py.</p></footer>')
 
 
-# ---------------------------------------------------------------------------
-# Montagem
-# ---------------------------------------------------------------------------
 def montar(hoje):
     v = dados.VIAGEM
     css = (MODELO / "estilo.css").read_text(encoding="utf-8")
@@ -571,10 +771,11 @@ def montar(hoje):
               f'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
               f'<link rel="stylesheet" href="{e(FONTES_GOOGLE)}">\n'
               f'<style>\n{css}\n</style>\n')
-    corpo = (f'<div id="app" data-inicio="{v["inicio"]}" data-fim="{v["fim"]}">\n'
-             f'{topo()}\n<main>'
-             f'{abertura(hoje)}{roteiro()}{cidade("mvd", "montevideu")}{cidade("ba", "buenos-aires")}'
-             f'{comer()}{compras()}{travessia()}{reveillon()}{antes()}{seguranca()}{pendencias()}{fontes()}'
+    corpo = ('<script>document.documentElement.classList.add("js")</script>\n'
+             f'<div id="app" data-inicio="{v["inicio"]}" data-fim="{v["fim"]}">\n'
+             f'{topo()}\n{gaveta()}\n<main>'
+             f'{inicio(hoje)}{roteiro()}{buscar()}{cidade("mvd", "montevideu")}{cidade("ba", "buenos-aires")}'
+             f'{comer()}{travessia()}{compras()}{antes()}{seguranca()}{pendencias()}{fontes()}'
              f'</main>\n{rodape(hoje)}\n</div>\n<script>\n{js}\n</script>\n')
     return cabeca, corpo
 
